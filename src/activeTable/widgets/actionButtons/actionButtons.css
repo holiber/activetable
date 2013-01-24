@@ -1,0 +1,32 @@
+.widget.action-buttons {background:#ffc300 url(/images/actions_bg_1.gif) left bottom repeat-x;padding:4px 8px 3px 27px;clear:both;font-size:11px;zoom:1;
+    -webkit-border-radius: 8px 8px 0 0;
+    -moz-border-radius: 8px 8px 0 0;
+    border-radius: 8px 8px 0 0;
+}
+.widget.action-buttons .chosen {padding: 5px 11px 0 0; height: auto;float:left;}
+.round_action_button	{
+}
+.widget.action-buttons .round-action-button {float:left;margin-left:6px;display:block;text-decoration:none;padding:3px 10px 3px 10px;background:#CCC;line-height:14px;font-size:12px;z-index:10;position:relative;border:1px solid #9B9D9A;color:#000;text-align:center;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    background: -webkit-gradient(linear, 0 0, 0 70%, from(#FFF), to(#DDD));
+    background: -webkit-linear-gradient(#FFF, #DDD 70%);
+    background: -moz-linear-gradient(#FFF, #DDD 70%);
+    background: -ms-linear-gradient(#FFF, #DDD 70%);
+    background: -o-linear-gradient(#FFF, #DDD 70%);
+    background: linear-gradient(#FFF, #DDD 70%);
+    -pie-background: linear-gradient(#FFF, #DDD 70%);
+}
+
+.widget.action-buttons .clear-selection {float:right;}
+
+.widget.action-buttons input {border: 1px solid #e2e9ef; border-top: 1px solid #aaadb2; font-size: 11px; color: #666; padding: 3px 4px 1px;}
+.widget.action-buttons .submit {width: 76px; height: 22px; background: url("/images/search_button.gif") left top no-repeat; color: #fff; border: 0; font-weight: bold; font-style: normal; padding: 0; cursor: pointer;}
+
+.widget.action-buttons .red a {color: #c93333;}
+.widget.action-buttons .right {float: right;}
+.widget.action-buttons .left {float: left;}
+.widget.action-buttons .act_clear {float: right}
+.widget.action-buttons .act_clear ins {background-position: -80px -12px;width:14px;height:14px;float:left;margin: 1px 5px -1px -3px;}
+.widget.action-buttons .left{padding-top: 5px}

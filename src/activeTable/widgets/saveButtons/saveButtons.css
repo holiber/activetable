@@ -1,0 +1,19 @@
+
+.widget.save-buttons {display:none;position: fixed;top:50%;right:10px;z-index: 100;margin-top:-80px;font-size:10px;line-height: 12px;background-color:#FFF;border:2px solid #ffc10b;-webkit-border-radius: 8px;-moz-border-radius: 8px;border-radius: 8px;padding:0 10px;width:55px;cursor:move;
+    -webkit-box-shadow: #CCC 0px 0px 4px;
+    -moz-box-shadow: #CCC 0px 0px 4px;
+    box-shadow: #CCC 0px 0px 4px;
+}
+.widget.save-buttons.visible {display:block;}
+.widget.save-buttons.with-recreate {display:block;}
+.widget.save-buttons a {text-decoration: none; color: #bbbbbb;display:block;text-align:center;display:block;margin: 10px 0}
+.widget.save-buttons span {display:block;font-weight:bold;text-align:center;background: url(/images/round.png) no-repeat;width: 28px;height: 22px;padding-top: 6px;position: absolute;top: -15px;right: -12px;}
+.widget.save-buttons a:hover {color: #0068CB;}
+.widget.save-buttons ins {width:40px;height:45px;background-position:0 -219px;margin-bottom:5px;margin-left:8px;}
+.widget.save-buttons .save ins {background-position:0 -219px}
+.widget.save-buttons .cancel ins {background-position:-41px -219px}
+.widget.save-buttons .recreate ins {background-position:-82px -219px}
+.widget.save-buttons .save.inactive ins {background-position:0 -265px}
+.widget.save-buttons .cancel.inactive ins {background-position:-41px -265px}
+.widget.save-buttons .recreate.inactive ins {background-position:-82px -265px}
+.widget.save-buttons a.hidden {display:none;}
