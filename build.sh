@@ -26,17 +26,17 @@ pack ()
 	#core table functions
 	cd src/activeTable
 	
-cat data.js table.js table.tpl.js | $cmd >> $p/dist/$todir/active-table-$VERSION$SUFFIX.js
-cat table.css | $cmdcss >> $p/dist/$todir/active-table-$VERSION$SUFFIX.css
+	cat data.js table.js table.tpl.js | $cmd >> $p/dist/$todir/active-table-$VERSION$SUFFIX.js
+	cat table.css | $cmdcss >> $p/dist/$todir/active-table-$VERSION$SUFFIX.css
 
-#table widgets
-cd widgets
-cat actionButtons/actionButtons.js actionButtons/actionButtons.tpl.js| $cmd >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.js
-cat actionButtons/actionButtons.css | $cmdcss >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.css
-cat perPage/perPage.js perPage/perPage.tpl.js| $cmd >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.js 
-cat saveButtons/saveButtons.js saveButtons/saveButtons.tpl.js| $cmdcss >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.js 
-cat saveButtons/saveButtons.css | $cmdcss >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.css
-cp $p/src/activeTable/icons.png $p/dist/$todir/icons.png
+	#table widgets
+	cd widgets
+	cat actionButtons/actionButtons.js actionButtons/actionButtons.tpl.js| $cmd >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.js
+	cat actionButtons/actionButtons.css | $cmdcss >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.css
+	cat perPage/perPage.js perPage/perPage.tpl.js| $cmd >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.js 
+	cat saveButtons/saveButtons.js saveButtons/saveButtons.tpl.js| $cmdcss >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.js 
+	cat saveButtons/saveButtons.css | $cmdcss >> $p/dist/$todir/active-table-widgets-$VERSION$SUFFIX.css
+	cp $p/src/activeTable/icons.png $p/dist/$todir/icons.png
 }
 
 comp="java -jar $p/yuicompressor-2.4.2.jar"
