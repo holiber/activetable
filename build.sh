@@ -26,7 +26,7 @@ pack ()
 	#core table functions
 	cd src/activeTable
 	
-	cat data.js table.js table.tpl.js | $cmd >> $p/dist/$todir/active-table-$VERSION$SUFFIX.js
+	cat haml.js data.js table.js table.tpl.js | $cmd >> $p/dist/$todir/active-table-$VERSION$SUFFIX.js
 	cat table.css | $cmdcss >> $p/dist/$todir/active-table-$VERSION$SUFFIX.css
 
 	#table widgets
