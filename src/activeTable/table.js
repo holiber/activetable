@@ -80,6 +80,7 @@
 						prop[name];
 			}
 
+			//static props addition
 			prop['_static'] = $.extend({}, this._static, prop['_static']);
 			if (prop['_static']) {
 				for (var name in prop['_static']) {
@@ -106,6 +107,102 @@
 
 			return Class;
 		};
+
+	/**
+	 * Haml templater by A.Gutnikov
+	 */
+	var Haml = (function() {
+
+		var IS_TAG_RE = /^[\.#%].*?/;
+
+		var StringBuilder = function(){
+			this.lines = [];
+		};
+		StringBuilder.prototype.append = function( val ){
+			this.lines.push(val);
+			return this;
+		};
+		StringBuilder.prototype.toString = function(){
+			return this.lines.join('');
+		};
+
+		function elem( elem, builder ){
+			if( !elem ){
+				builder.append('');
+			} else if( elem.constructor === String || elem.constructor === Number ){
+				builder.append( elem );
+			} else if( elem.constructor === Array ) {
+				arrayElem( elem,builder );
+			} else if( elem.constructor === Function ){
+				builder.append(elem.toString());
+			}
+		}
+
+		function arrayElem( elem, builder ){
+			var hasAttrs, t,e0;
+			if( !elem.length ){
+				return '';
+			}
+			e0 = elem[0] && elem[0].constructor;
+			if( e0 === String && IS_TAG_RE.test(elem[0])){
+				// is tag?
+				hasAttrs = elem[1] && elem[1].constructor === Object;
+				t = tag(elem[0], hasAttrs ? elem[1] : null );
+				builder.append(t[0]);
+				childs( elem, hasAttrs ? 2 : 1, builder );
+				builder.append(t[1]);
+			} else {
+				childs(elem, 0, builder);
+			}
+		}
+
+
+		function childs( array, startFrom, builder ){
+			for( var i = startFrom, len = array.length;i < len; i++ ){
+				elem(array[i], builder);
+			}
+		}
+
+		function tag( type, attrs ){
+			var tm = type.match(/^%([^\.#]*)/),
+				tg = tm && tm[1] ? tm[1] : 'div',
+				cm = type.match(/\.([a-zA-Z_\-0-9\.]*)/),
+				cls = cm && cm[1] ? cm[1] : null,
+				idm = type.match(/#([a-zA-Z_\-0-9]*)/),
+				id = idm && idm[1] ? idm[1] : null,
+				attrstr = '',
+				attrvalue;
+
+			if( attrs ){
+				for( var k in attrs ){
+					if( attrs[k]){
+						attrvalue = attrs[k].constructor === String ?
+							'"' + attrs[k] + '"' : attrs[k];
+						attrstr += k + '=' + attrvalue + ' ';
+					}
+				}
+				attrstr.length && (attrstr = attrstr.substr(0, attrstr.length - 1));
+			}
+			return [
+				'<' + tg +
+					( id ? ' id="' + id + '"' : '') +
+					( cls ? ' class="' + cls.replace(/\./ig,' ') + '"' : '') +
+					( attrstr.length ? ' ' + attrstr : '' )+ ">",
+				'</' + tg + '>'
+			];
+		}
+
+
+		var Haml = {
+			toHtml: function( tpl ){
+				var sb = new StringBuilder();
+				elem(tpl, sb);
+				return sb.toString();
+			}
+		};
+
+		return Haml;
+	})();
 
 	
 	
@@ -143,7 +240,7 @@
 		},
 
 		/**
-		 * format number in format "999 999"
+		 * format number as "999 999"
 		 * @param {String|Number} number
 		 * @return
 		 */
@@ -297,7 +394,6 @@
 			this.fieldsDefaults = this.params.fieldsDefaults;
 			this.hiddenFields = this.params.hiddenFields;
 			this.order = this.params.order;
-			this.templates = $.extend(true, {}, this.defaultTemplates, this.params.templates);
 			this.name = this.params.name;
 			this.defaultSort = this.params.defaultSort;
 			this.selectable = this.params.selectable;
@@ -312,9 +408,9 @@
 
 			this.setData(this.params.data);
 			this.setFields(this.params.fields);
+			this.setTemplates(this.params.templates);
 
 			this.rowsCnt = this.data.size();
-			//this.loadState();
 			if (this.params.sort || this.sort) this.data.sort(this.params.sort || this.sort);
 
 			//init widgets
@@ -371,6 +467,7 @@
 			if (options.helper) this.helper = options.helper;
 			if (options.on) this.on = options.on;
 			if (options.sort) this.sort = sort;
+			if (options.templates) this.setTemplates(options.templates);
 			if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
 			if (options.fields || options.showOnlyDescribed || (!options.data && this.showOnlyDescribed)) {
 				this.setFields(options.fields);
@@ -383,6 +480,11 @@
 		setData: function (data) {
 			this.data = (data instanceof ActiveData) ? (data || {columns: [], rows: []}): new ActiveData(data);
 			this.data.listener = $.proxy(this._dataListener, this);
+		},
+
+		setTemplates: function (templates) {
+			if ($.isFunction(templates)) templates = {columns: templates, cells: templates};
+			this.templates = $.extend(true, {}, this.defaultTemplates, templates);
 		},
 
 		setFields: function (fields) {
@@ -449,7 +551,8 @@
 			}
 
 			var firstTimeRendering = (el && el.length) || !(this.layout);
-			this.layout = $(this.templates.layout(this));
+
+			this.layout = $(this.templates.renderer(this));
 			
 			//widgets
 			if (firstTimeRendering || !this.enabled) {
@@ -477,7 +580,8 @@
 				var field = this.fields[fieldName];
 				if (field.fixedWidth) {
 					var jqColumn = this.el.find('tr .col-' + fieldName);
-					jqColumn.width(jqColumn.width());
+					if (!field.width) field.width = jqColumn.width();
+					jqColumn.width(field.width);
 				}
 			}
 			this.emit('render', this);
@@ -1161,6 +1265,7 @@
 		},
 		
 		_static: {
+			Haml: Haml,
 			Widget: Widget,
 			utils: tableUtils,
 			widgetsSet: {},
@@ -1193,7 +1298,10 @@
 				ActiveTable.widgetsSet[name] = NewWidget;
 			},
 
-			//installWidgetTemplate: function()
+			installDefaultTemplates: function(templates) {
+				if (!this.prototype.defaultTemplates) this.prototype.defaultTemplates = {};
+				this.prototype.defaultTemplates = $.extend({}, this.prototype.defaultTemplates, templates);
+			},
 
 			getWidget: function (name) {
 				return this.widgetsSet[name];
@@ -1202,7 +1310,311 @@
 		}
 		
 	});
-	
 
+
+	ActiveTable.installDefaultTemplates({
+
+		renderer: function (table) {
+			var layout, ttable, tbody, thead, pagination;
+
+			pagination = table.templates.pagination({tpl: {pagination: true}, table: table});
+
+			// COLUMNS:
+
+			var columns = '';
+			var fieldName = '';
+
+			if (table.selectable) columns += table.templates.checkboxHead({tplCheckboxHead: true, table: table});
+
+			for (var key = 0; key < table.visibleFields.length; key++) {
+				fieldName = table.visibleFields[key];
+				var field = table.fields && table.fields[fieldName] || false;
+				field = $.extend({}, field);
+				if ($.isFunction(field.title)) field.title = field.title(field, table);
+
+				var columnParams = {
+					tpl: {
+						column: true,
+						field: {}
+					},
+					table: table,
+					fieldName: fieldName,
+					title: field.title,
+					field: field,
+					sFieldName: table.utils.toScore(fieldName),
+					sort: ((table.sort && table.sort[0] && table.sort[0].fieldName == fieldName) ? table.sort[0].order : ''),
+					type: (field.type ? table.utils.toScore(field.type) : ''),
+					isFirst: (!table.selectable && fieldName == table.visibleFields[0]),
+					isLast: (fieldName == table.visibleFields[table.visibleFields.length - 1])
+				};
+				columnParams.tpl.field[fieldName] = true;
+
+				var content = '';
+
+				if ($.isFunction(table.templates.columns)) {
+					content = table.templates.columns(columnParams).trim();
+				} else if (table.templates.columns[fieldName]) {
+					content = table.templates.columns[fieldName](columnParams);
+				}
+
+				if (content === '') content = field.title || fieldName;
+
+				var columnWrapParams = columnParams;
+				columnWrapParams.tpl = {columnWrap: true,field: {}}
+				columnWrapParams['tpl']['field'][fieldName] = true;
+				columnWrapParams.content = content;
+
+				var column = table.templates.columnWrap(columnParams);
+				columns += column;
+			}
+			thead = table.templates.thead({tpl: {thead: true}, table: table, columns: columns});
+
+
+			// ROWS:
+
+			var rows = '';
+			var data = table.data.find(table.computedFilter);
+			var from = table.page * table.perPage - table.perPage;
+			var to = from + table.perPage;
+			var odd = !!(from % 2);
+			if (table.data && to > table.rowsCnt) to = table.rowsCnt;
+			if (table.data && from > table.rowsCnt) from = 0;
+
+			for (var i = from; i < to; i++) {
+				var row = data[i];
+				if (!row) continue;
+				var rowParams = {
+					tpl: {row: true},
+					table: table,
+					row: row,
+					odd: odd
+				}
+				var cells = table.templates.trow(rowParams);
+
+				var rowWrapParams = {
+					tpl: {rowWrap: true},
+					table: table,
+					row: row,
+					odd: odd,
+					cells: cells
+				}
+				var row = table.templates.rowWrap(rowWrapParams);
+				rows += row;
+				odd = !odd;
+			}
+
+			var fakeRowsCnt = table.perPage - (to - from);
+			if (table.fixedRowsCnt && fakeRowsCnt) {
+				var fakeRow = {};
+				for (var i = 0; i < table.data.columns; i++) {
+					fakeRow[table.data.columns[i]] = null;
+				}
+				for (var i = 0; i < fakeRowsCnt; i++) {
+					var rowParams = {
+						tpl: {row: true},
+						table: table,
+						fake: true,
+						row: row,
+						odd: odd
+					}
+					var cells = table.templates.trow(rowParams);
+					var rowWrapParams = {
+						tpl: {rowWrap: true},
+						table: table,
+						fake: true,
+						row: row,
+						odd: odd,
+						cells: cells
+					}
+					var row = table.templates.rowWrap(rowWrapParams);
+					rows += row;
+					odd = !odd;
+				}
+			}
+
+			tbody = table.templates.tbody({tpl: {tbody: true}, table: table, rows: rows});
+			ttable = table.templates.table({tpl: {table: true}, thead: thead, tbody: tbody});
+			layout = table.templates.layout({
+				tpl: {layout: true},
+				table: table,
+				ttable: ttable,
+				pagination: pagination,
+				sTableName: table.utils.toScore(table.name + '-table.active-table')
+			});
+			return layout;
+		},
+
+		// TEMPLATES:
+
+		layout: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%div." + p.sTableName,
+				[".widgets"],
+				[".dtable", p.ttable],
+				[".pager", p.pagination],
+				[".clearfix", {style: 'clear:both'}]
+			]);
+		},
+
+		table: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%table.data-table.",
+				{cellspacing: "0"},
+				p.thead,
+				p.tbody
+			]);
+		},
+
+		tbody: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%tbody", p.rows]);
+		},
+
+		thead: function (params) {
+			return context.ActiveTable.Haml.toHtml(["%thead", ["%tr", params.columns]]);
+		},
+
+		trow: function (p) {
+			var tpl = p.table.templates;
+			var row = p.row;
+			var table = p.table;
+			var cells = '';
+			if (table.selectable) cells += table.templates.checkboxCell({tpl: {checkboxCell: true}, row: row});
+
+			for (var key = 0; key < table.visibleFields.length; key++) {
+				var fieldName = p.table.visibleFields[key];
+				var field = p.table.fields[fieldName];
+				var cell = $.extend({value: row[fieldName], display: row[fieldName]}, field);
+
+				var cellParams = {
+					tpl: {cell: true, field: {}},
+					table: table,
+					cell: cell,
+					row: row,
+					fieldName: fieldName,
+					sFieldName: table.utils.toScore(fieldName),
+					fake: p.fake,
+					isFirst: (!table.selectable && fieldName == table.visibleFields[0]),
+					isLast: (fieldName == table.visibleFields[table.visibleFields.length - 1]),
+					sort: ((table.sort && table.sort[0] && table.sort[0].fieldName == fieldName) ? "." + table.sort[0].order : "")
+				};
+				cellParams['tpl']['field'][fieldName] = true;
+
+				if (!p.fake) {
+					if (cell.display) {
+						$.isFunction(cell.display) && (cell.display = cell.display({tpl: {cell: true}, cell: cell, row: row, table: table}));
+					}
+					switch (cell.type) {
+						case 'date': cell.display = table.utils.dateToSting(row[fieldName]) || field.defaultValue || '';break;
+						case 'number':
+							if (cell.display !== null) {
+								if (!cell.display % 1) cell.display = cell.display.toFixed(2);
+								cell.display = String(cell.display).replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1 ');
+							}
+							break;
+					}
+					if ($.isFunction(table.templates.cells)) {
+						var cellContent = table.templates.cells(cellParams).trim();
+						if (cellContent !== '') cell.display = cellContent;
+					} else if (table.templates.cells[fieldName]) {
+						cell.display = table.templates.cells[fieldName](cellParams);
+					}
+				} else {
+					cell.display = '';
+				}
+
+
+				var cellWrapParams = cellParams;
+				cellWrapParams.tpl = {cellWrap: true, field: {}},
+					cellWrapParams.tpl.field = fieldName;
+
+				cells += table.templates.cellWrap(cellWrapParams);
+			}
+			return cells;
+		},
+
+		checkboxHead: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%th.col-checkbox", [".checkbox"]]);
+		},
+
+		checkboxCell: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox.col-first", {rel: p.row.idx}, [".checkbox", {rel: p.row.idx}]]);
+		},
+
+		pagination: function (p) {
+			var table = p.table;
+			if (!table.perPage || !table.rowsCnt) return [];
+			var maxPages = 10;
+			var pagesCnt = Math.ceil(table.rowsCnt / table.perPage);
+			if (pagesCnt == 1) return [];
+			var pages = [];
+			var displayPrev = (table.page == 1 ? "none" : "inherit");
+			var displayNext = (table.page == pagesCnt ? "none" : "inherit");
+			pages.push(["%a.button.next", {href: "#", rel: "next", style: "display:" + displayNext}, '>']);
+			if (pagesCnt <= maxPages) {
+				for (var i = 1; i <= pagesCnt; i++) {
+					pages.push(["%a" + (i == table.page ? ".current" : ""), {href: "#", rel: i}, i]);
+				}
+			} else if (table.page < maxPages) {
+				for (var i = 1; i <= maxPages; i++) {
+					pages.push(["%a" + (i == table.page ? ".current" : ""), {href: "#", rel: i}, i]);
+				}
+				pages.push(["%i", "..."]);
+				pages.push(["%a", {href: "#", rel: pagesCnt}, pagesCnt]);
+			} else if(table.page > pagesCnt - maxPages) {
+				pages.push(["%a", {href: "#", rel: 1}, 1]);
+				pages.push(["%i", "..."]);
+				for (var i = pagesCnt - maxPages; i <= pagesCnt; i++) {
+					pages.push(["%a" + (i == table.page ? ".current" : ""), {href: "#", rel: i}, i]);
+				}
+			} else {
+				pages.push(["%a", {href: "#", rel: 1}, 1]);
+				pages.push(["%i", "..."]);
+				for (var i = table.page - 1; i < table.page + maxPages; i++) {
+					pages.push(["%a" + (i == table.page ? ".current" : ""), {href: "#", rel: i}, i]);
+				}
+				pages.push(["%i", "..."]);
+				pages.push(["%a", {href: "#", rel: pagesCnt}, pagesCnt]);
+			}
+			pages.push(["%a.button.prev", {href: "#", rel: "prev", style: "display:" + displayPrev}, '<']);
+			return [".pagination", pages];
+		},
+
+		subrow: function (p) {
+			var table = p.table;
+			var colspan = table.visibleFields.length;
+			if (table.selectable) colspan++;
+			return context.ActiveTable.Haml.toHtml(["%tr.subrow", ["%td", {colspan: colspan} ]]);
+		},
+
+		columnWrap: function (params) {
+			var isFirst = params.isFirst ? '.col-first' : '';
+			var isLast = params.isFirst ? '.col-last' : '';
+			var type = params.type ? '.' + params.type : '';
+			var sort = params.sort ? '.' + params.sort : '';
+			return context.ActiveTable.Haml.toHtml(["%th.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, params.content]);
+		},
+
+		cellWrap: function (p) {
+			var table = p.table;
+			var sort = (p.sort ? '.' + p.sort: '');
+			var attr = {rel: p.fieldName, value: p.row[p.fieldName]};
+			var editable = (p.cell.editable ? ".editable" : "");
+			var first = (p.isFirst ? ".col-first" : "");
+			var last = (p.isLast ? ".col-last" : "");
+			var type = (p.cell.type ? "." + p.cell.type : "");
+			return context.ActiveTable.Haml.toHtml(["%td.col-" + p.sFieldName + type + editable + first + last + sort, attr, p.cell.display]);
+		},
+
+		rowWrap: function (p) {
+			var attr = {rel: p.row.idx}
+			return context.ActiveTable.Haml.toHtml(["%tr." + (p.odd ? "odd" : "even") + (p.fake ? '.fake' : ''), attr, p.cells]);
+		},
+
+		columns: {
+
+		},
+
+		cells: {
+
+		}
+	});
 
 })(window);
