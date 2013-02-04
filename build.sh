@@ -1,6 +1,3 @@
-# Usage: use ./build.sh to build a minified version of table and its widgets 
-# or ./build.sh --dev to build concatenated version
-
 #Increment active table version here
 VERSION=0.1
 
