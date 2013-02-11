@@ -952,6 +952,7 @@
 				jqVscroll.addClass('disabled');
 				return;
 			}
+			jqVscroll.removeClass('disabled');
 			var vBarHeight = vScaleFactor * jqScrollTrack.height();
 			var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
 			if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
