@@ -1025,8 +1025,9 @@
 			}.bind(this));
 
 			this.el.on('mousewheel.table', function (e, deltaY, deltaX) {
+				if (!this.vscroll) return;
 				var acceleration = this.vscrollAcceleration;
-				var scrollY = this.getScrollPos().y;
+				var scrollY = this.vscrollPos;
 				deltaY = deltaY * acceleration;
 				deltaY = deltaY > 0 ? Math.ceil(deltaY) : Math.floor(deltaY);
 				this.scrollTo(scrollY - deltaY);
