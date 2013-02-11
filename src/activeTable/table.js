@@ -14,6 +14,10 @@
 		hiddenFields: ['idx'],
 		showOnlyDescribed: false,
 		sort: false,
+		vscroll: false,
+		hscroll: false,
+		vscrollAcceleration: 10,
+		hscrollAcceleration: 10,
 		widgets: {},
 		widgetsOrder: [],
 		helper: {},
@@ -30,7 +34,7 @@
 			maxValue: undefined,
 			minValue: undefined
 			//title: function (field) { return field.name}
-			//display: function (row) {}
+			//display: function (tplParams) {}
 		},
 		on: {}
 	};
@@ -378,10 +382,19 @@
 			this.selection = []; //array of indexes of selected elements
 			this._checkAll = false; //true when all elements are selected
 			this.on = null; //external event handlers
+			this.vscroll = false;//vertical scrollbar
+			this.hscroll = false;//horisontal scrollbar
+			this.vscrollPos = 0;
+			this.hscrollPos = 0;
+			this.vscrollAcceleration = null,
+			this.hscrollAcceleration = null,
+			this.scrollOverflowHeight = 0;
+			this.scrollLayerHeight = 0;
 			this.locked = false;
 			this.enabled = true;
 			this.clientX = null;
 			this.clientY = null;
+			this.isVscrolling = false;
 			this.lastCheckedIdx = null;
 			this._setOptions(options);
 		},
@@ -405,6 +418,10 @@
 			this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
 			this.showOnlyDescribed = this.params.showOnlyDescribed;
 			this.el = this.params.el;
+			this.vscroll = this.params.vscroll;
+			this.hscroll = this.params.hscroll;
+			this.vscrollAcceleration = this.params.vscrollAcceleration;
+			this.hscrollAcceleration = this.params.hscrollAcceleration;
 
 			this.setData(this.params.data);
 			this.setFields(this.params.fields);
@@ -575,6 +592,21 @@
 				this.enabled = true;
 			}
 
+			if (this.vscroll) {
+				this.resize();
+
+				for (var i = 0; i < this.visibleFields.length; i++) {
+					var fieldName = this.visibleFields[i];
+					var selector = ActiveTable.utils.toScore(fieldName);
+					var jqTh = this.el.find('.dtable th.col-' + selector + ':first');
+					var jqTd = this.el.find('.dtable td.col-' + selector + ':first');
+					var tdWidth = jqTd.width();
+					jqTh.width(tdWidth);
+					var thWidth = jqTh.width();
+					if (thWidth > tdWidth) jqTd.width(thWidth);
+				}
+			}
+
 			//fix column width
 			for (var fieldName in this.fields) {
 				var field = this.fields[fieldName];
@@ -585,6 +617,18 @@
 				}
 			}
 			this.emit('render', this);
+		},
+
+		resize: function () {
+			var jqOverflow = this.el.find('.vscroll-overflow:first');
+			jqOverflow.css({height: 'auto'});
+			var height = this.el.height();
+			var wrapHeight = this.el.find('.table-wrap:first').height();
+			var freeHeight = height - wrapHeight;
+			jqOverflow.height(jqOverflow.height() + freeHeight);
+			this.scrollOverflowHeight = jqOverflow.height();
+			this.scrollLayerHeight = this.el.find('.vscroll-layer:first').height();
+			this.scrollTo(this.vscrollPos);
 		},
 
 		disable: function () {
@@ -635,6 +679,7 @@
 			this.page = Number(page);
 			this.saveState();
 			this.render();
+			this.scrollTo(0);
 			return true;
 		},
 
@@ -801,7 +846,7 @@
 		/**
 		 * table events processing
 		 * @param {String} eventName
-		 * @param data
+		 * @param [data]
 		 */
 		emit: function(eventName, data) {
 			//throw event to widgets
@@ -882,6 +927,38 @@
 			this.sort = state.sort;
 		},
 
+		getScrollPos: function () {
+			var y = this.el.find('.vscroll-layer:first').position().top;
+			return {x: 0, y: -y}
+		},
+
+		scrollTo: function (offsetY) {
+
+			//set scroll layer position
+			if (!this.vscroll) return;
+			if (offsetY < 0 ) offsetY = 0;
+			var maxVscroll = this.scrollLayerHeight - this.scrollOverflowHeight;
+			if (maxVscroll < 0) maxVscroll = 0;
+			if (offsetY > maxVscroll) offsetY = maxVscroll;
+			this.layout.find('.vscroll-layer:first').css({top: -offsetY});
+			this.vscrollPos = offsetY;
+
+			//set scrollbar
+			var jqVscroll = this.el.find('.vscroll:first');
+			var jqScrollTrack =  jqVscroll.find('.scroll-track');
+			var jqScrollbar = jqScrollTrack.find('.scrollbar');
+			var vScaleFactor = this.scrollOverflowHeight / this.scrollLayerHeight;
+			if (vScaleFactor > 1) {
+				jqVscroll.addClass('disabled');
+				return;
+			}
+			var vBarHeight = vScaleFactor * jqScrollTrack.height();
+			var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
+			if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
+			jqScrollbar.height(vBarHeight);
+			jqScrollbar.css({top: this.getScrollPos().y * (jqScrollTrack.height() - vBarHeight) / (this.scrollLayerHeight - this.scrollOverflowHeight)});
+		},
+
 		/**
 		 * render selection
 		 * @private
@@ -942,10 +1019,27 @@
 			var self = this;
 			this.el.off('.table');
 
-			this.el.mousemove(function (e) {
-				self.clientX = e.clientX;
-				self.clientY = e.clientY;
-			});
+			this.el.on('mousemove.table', function (e) {
+				this.clientX = e.clientX;
+				this.clientY = e.clientY;
+			}.bind(this));
+
+			this.el.on('mousewheel.table', function (e, deltaY, deltaX) {
+				var acceleration = this.vscrollAcceleration;
+				var scrollY = this.getScrollPos().y;
+				deltaY = deltaY * acceleration;
+				deltaY = deltaY > 0 ? Math.ceil(deltaY) : Math.floor(deltaY);
+				this.scrollTo(scrollY - deltaY);
+				e.preventDefault();
+			}.bind(this));
+
+			this.el.on('mousedown.table', '.vscroll .scroll-track', function (e) {
+				var jqScrollTrack = $(e.currentTarget);
+				if (!this.isVscrolling) {
+
+				}
+				this.isVscrolling = true;
+			}.bind(this));
 
 			//sort
 			this.el.on('click.table', '.dtable th', function () {
@@ -972,6 +1066,7 @@
 				}
 				self.saveState();
 				self.render();
+				self.scrollTo(0);
 				return false;
 			});
 
@@ -1434,10 +1529,16 @@
 
 			tbody = table.templates.tbody({tpl: {tbody: true}, table: table, rows: rows});
 			ttable = table.templates.table({tpl: {table: true}, thead: thead, tbody: tbody});
+
+			var vscroll = table.templates.vscroll({tpl: {vscroll: true}, table: table});
+			var hscroll = table.templates.hscroll({tpl: {hscroll: true}, table: table});
+
 			layout = table.templates.layout({
 				tpl: {layout: true},
 				table: table,
 				ttable: ttable,
+				vscroll: vscroll,
+				hscroll: hscroll,
 				pagination: pagination,
 				sTableName: table.utils.toScore(table.name + '-table.active-table')
 			});
@@ -1447,11 +1548,18 @@
 		// TEMPLATES:
 
 		layout: function (p) {
-			return context.ActiveTable.Haml.toHtml(["%div." + p.sTableName,
-				[".widgets"],
-				[".dtable", p.ttable],
-				[".pager", p.pagination],
-				[".clearfix", {style: 'clear:both'}]
+			var table = p.table;
+			var classes = '';
+			classes = '.' + p.sTableName;
+			if (table.vscroll) classes += '.has-vscroll';
+			if (table.hscroll) classes += '.has-hscroll';
+			return context.ActiveTable.Haml.toHtml(["%div." + classes,
+				['.table-wrap',
+					['.widgets'],
+					['.dtable', p.ttable, p.vscroll, p.hscroll],
+					['.pager', p.pagination],
+					[".clearfix", {style: 'clear:both'}]
+				]
 			]);
 		},
 
@@ -1464,7 +1572,14 @@
 		},
 
 		tbody: function (p) {
-			return context.ActiveTable.Haml.toHtml(["%tbody", p.rows]);
+			if (!p.table.vscroll) return context.ActiveTable.Haml.toHtml(["%tbody", p.rows]);
+			var colspan = p.table.visibleFields.length;
+			if (p.table.selectable) colspan++;
+			return context.ActiveTable.Haml.toHtml(["%tbody",
+				['%tr', ['%td.vscroll-overflow', {colspan: colspan},
+					['%table.vscroll-layer', p.rows]
+				]]
+			]);
 		},
 
 		thead: function (params) {
@@ -1608,6 +1723,24 @@
 			return context.ActiveTable.Haml.toHtml(["%tr." + (p.odd ? "odd" : "even") + (p.fake ? '.fake' : ''), attr, p.cells]);
 		},
 
+		vscroll: function (p) {
+			if (!p.table.vscroll) return '';
+			return context.ActiveTable.Haml.toHtml(['.vscroll',
+				['.scroll-btn.scroll-up'],
+				['.scroll-track', ['.scrollbar']],
+				['.scroll-btn.scroll-down']
+			]);
+		},
+
+		hscroll: function (p) {
+			if (!p.table.hscroll) return '';
+			return context.ActiveTable.Haml.toHtml(['.hscroll',
+				['.scroll-btn.scroll-left'],
+				['.scroll-track', ['.scrollbar']],
+				['.scroll-btn.scroll-right']
+			]);
+		},
+
 		columns: {
 
 		},
@@ -1618,3 +1751,90 @@
 	});
 
 })(window);
+
+
+
+/*! Copyright (c) 2011 Brandon Aaron (http://brandonaaron.net)
+ * Licensed under the MIT License (LICENSE.txt).
+ *
+ * Thanks to: http://adomas.org/javascript-mouse-wheel/ for some pointers.
+ * Thanks to: Mathias Bank(http://www.mathias-bank.de) for a scope bug fix.
+ * Thanks to: Seamus Leahy for adding deltaX and deltaY
+ *
+ * Version: 3.0.6
+ *
+ * Requires: 1.2.2+
+ */
+
+(function($) {
+
+	var types = ['DOMMouseScroll', 'mousewheel'];
+
+	if ($.event.fixHooks) {
+		for ( var i=types.length; i; ) {
+			$.event.fixHooks[ types[--i] ] = $.event.mouseHooks;
+		}
+	}
+
+	$.event.special.mousewheel = {
+		setup: function() {
+			if ( this.addEventListener ) {
+				for ( var i=types.length; i; ) {
+					this.addEventListener( types[--i], handler, false );
+				}
+			} else {
+				this.onmousewheel = handler;
+			}
+		},
+
+		teardown: function() {
+			if ( this.removeEventListener ) {
+				for ( var i=types.length; i; ) {
+					this.removeEventListener( types[--i], handler, false );
+				}
+			} else {
+				this.onmousewheel = null;
+			}
+		}
+	};
+
+	$.fn.extend({
+		mousewheel: function(fn) {
+			return fn ? this.bind("mousewheel", fn) : this.trigger("mousewheel");
+		},
+
+		unmousewheel: function(fn) {
+			return this.unbind("mousewheel", fn);
+		}
+	});
+
+
+	function handler(event) {
+		var orgEvent = event || window.event, args = [].slice.call( arguments, 1 ), delta = 0, returnValue = true, deltaX = 0, deltaY = 0;
+		event = $.event.fix(orgEvent);
+		event.type = "mousewheel";
+
+		// Old school scrollwheel delta
+		if ( orgEvent.wheelDelta ) { delta = orgEvent.wheelDelta/120; }
+		if ( orgEvent.detail     ) { delta = -orgEvent.detail/3; }
+
+		// New school multidimensional scroll (touchpads) deltas
+		deltaY = delta;
+
+		// Gecko
+		if ( orgEvent.axis !== undefined && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
+			deltaY = 0;
+			deltaX = -1*delta;
+		}
+
+		// Webkit
+		if ( orgEvent.wheelDeltaY !== undefined ) { deltaY = orgEvent.wheelDeltaY/120; }
+		if ( orgEvent.wheelDeltaX !== undefined ) { deltaX = -1*orgEvent.wheelDeltaX/120; }
+
+		// Add event and delta to the front of the arguments
+		args.unshift(event, delta, deltaX, deltaY);
+
+		return ($.event.dispatch || $.event.handle).apply(this, args);
+	}
+
+})(jQuery);
