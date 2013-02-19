@@ -1,7 +1,7 @@
 (function(context){
 	var tpl = {};
 	tpl.layout = function (widget) {
-		return Haml.toHtml(["%div",
+		return context.ActiveTable.Haml.toHtml(["%div",
 			"по ",
 			["%select",[
 				["%option", 20],

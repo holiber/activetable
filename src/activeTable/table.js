@@ -14,10 +14,13 @@
 		hiddenFields: ['idx'],
 		showOnlyDescribed: false,
 		sort: false,
-		vscroll: false,
-		hscroll: false,
-		vscrollAcceleration: 10,
-		hscrollAcceleration: 10,
+		scrollParams: {
+			vscroll: false,
+			hscroll: false,
+			vAcceleration: 10,
+			hAcceleration: 10,
+			autoSizing: true
+		},
 		widgets: {},
 		widgetsOrder: [],
 		helper: {},
@@ -382,19 +385,25 @@
 			this.selection = []; //array of indexes of selected elements
 			this._checkAll = false; //true when all elements are selected
 			this.on = null; //external event handlers
-			this.vscroll = false;//vertical scrollbar
-			this.hscroll = false;//horisontal scrollbar
-			this.vscrollPos = 0;
-			this.hscrollPos = 0;
-			this.vscrollAcceleration = null,
-			this.hscrollAcceleration = null,
-			this.scrollOverflowHeight = 0;
-			this.scrollLayerHeight = 0;
+			this.scrollParams = {
+				vertical: false,
+				horizontal: false,
+				vPos: 0,
+				hPos: 0,
+				vAcceleration: null,
+				hAcceleration: null,
+				scrollOverflowHeight: 0,
+				scrollLayerHeight: 0,
+				autoSizing: true,
+				isVscrolling: false,
+				isHscrolling: false,
+				vBarOffsetY: 0,
+				hBarOffsetX: 0
+			};
 			this.locked = false;
 			this.enabled = true;
 			this.clientX = null;
 			this.clientY = null;
-			this.isVscrolling = false;
 			this.lastCheckedIdx = null;
 			this._setOptions(options);
 		},
@@ -418,10 +427,7 @@
 			this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
 			this.showOnlyDescribed = this.params.showOnlyDescribed;
 			this.el = this.params.el;
-			this.vscroll = this.params.vscroll;
-			this.hscroll = this.params.hscroll;
-			this.vscrollAcceleration = this.params.vscrollAcceleration;
-			this.hscrollAcceleration = this.params.hscrollAcceleration;
+			this.scrollParams = $.extend({}, DEFAULT_OPTIONS, this.params.scrollParams);
 
 			this.setData(this.params.data);
 			this.setFields(this.params.fields);
@@ -486,7 +492,8 @@
 			if (options.sort) this.sort = sort;
 			if (options.templates) this.setTemplates(options.templates);
 			if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
-			if (options.fields || options.showOnlyDescribed || (!options.data && this.showOnlyDescribed)) {
+			if (options.order) this.order = options.order
+			if (options.fields || options.order || options.showOnlyDescribed || (!options.data && this.showOnlyDescribed)) {
 				this.setFields(options.fields);
 			}
 			if (options.data || options.sort) {
@@ -592,19 +599,28 @@
 				this.enabled = true;
 			}
 
-			if (this.vscroll) {
+			if (this.scrollParams.vertical) {
+
+				if (!jQuery.fn.mousewheel) {
+					throw ('you need to jquery.mousewheel plugin for use scroll. You can find it in "optional" folder.');
+					return false;
+				}
+
 				this.resize();
 
-				for (var i = 0; i < this.visibleFields.length; i++) {
-					var fieldName = this.visibleFields[i];
-					var selector = ActiveTable.utils.toScore(fieldName);
-					var jqTh = this.el.find('.dtable th.col-' + selector + ':first');
-					var jqTd = this.el.find('.dtable td.col-' + selector + ':first');
-					var tdWidth = jqTd.width();
-					jqTh.width(tdWidth);
-					var thWidth = jqTh.width();
-					if (thWidth > tdWidth) jqTd.width(thWidth);
+				if (this.scrollParams.autoSizing) {
+					for (var i = 0; i < this.visibleFields.length; i++) {
+						var fieldName = this.visibleFields[i];
+						var selector = ActiveTable.utils.toScore(fieldName);
+						var jqTh = this.el.find('.dtable th.col-' + selector + ':first');
+						var jqTd = this.el.find('.dtable td.col-' + selector + ':first');
+						var tdWidth = jqTd.width();
+						jqTh.width(tdWidth);
+						var thWidth = jqTh.width();
+						if (thWidth > tdWidth) jqTd.width(thWidth);
+					}
 				}
+
 			}
 
 			//fix column width
@@ -619,6 +635,9 @@
 			this.emit('render', this);
 		},
 
+		/**
+		 *  resize table in scroll mode
+		 */
 		resize: function () {
 			var jqOverflow = this.el.find('.vscroll-overflow:first');
 			jqOverflow.css({height: 'auto'});
@@ -626,9 +645,9 @@
 			var wrapHeight = this.el.find('.table-wrap:first').height();
 			var freeHeight = height - wrapHeight;
 			jqOverflow.height(jqOverflow.height() + freeHeight);
-			this.scrollOverflowHeight = jqOverflow.height();
-			this.scrollLayerHeight = this.el.find('.vscroll-layer:first').height();
-			this.scrollTo(this.vscrollPos);
+			this.scrollParams.overflowHeight = jqOverflow.height();
+			this.scrollParams.layerHeight = this.el.find('.vscroll-layer:first').height();
+			this.scrollTo(this.scrollParams.vPos);
 		},
 
 		disable: function () {
@@ -932,31 +951,47 @@
 			return {x: 0, y: -y}
 		},
 
-		scrollTo: function (offsetY) {
+		/**
+		 * scroll to posiniton in pixels or percent
+		 * @example
+		 * table.scrollTo('50%', 50);
+		 *
+		 * @param {Number|String} offsetY
+		 * @param {Number|String} offsetX
+		 */
+		scrollTo: function (offsetY, offsetX) {
 
 			//set scroll layer position
-			if (!this.vscroll) return;
-			if (offsetY < 0 ) offsetY = 0;
-			var maxVscroll = this.scrollLayerHeight - this.scrollOverflowHeight;
+			var maxVscroll = this.scrollParams.layerHeight - this.scrollParams.overflowHeight;
 			if (maxVscroll < 0) maxVscroll = 0;
+
+			//if offsetY in percent
+			if (String(offsetY).indexOf('%') != -1) {
+				var percent = Number(offsetY.split('%')[0]);
+				offsetY = (percent/100) * maxVscroll;
+			}
+
+			if (offsetY < 0 || !offsetY) offsetY = 0;
+
 			if (offsetY > maxVscroll) offsetY = maxVscroll;
 			this.layout.find('.vscroll-layer:first').css({top: -offsetY});
-			this.vscrollPos = offsetY;
+			this.scrollParams.vPos = offsetY;
 
 			//set scrollbar
 			var jqVscroll = this.el.find('.vscroll:first');
 			var jqScrollTrack =  jqVscroll.find('.scroll-track');
 			var jqScrollbar = jqScrollTrack.find('.scrollbar');
-			var vScaleFactor = this.scrollOverflowHeight / this.scrollLayerHeight;
+			var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
 			if (vScaleFactor > 1) {
 				jqVscroll.addClass('disabled');
 				return;
 			}
+			jqVscroll.removeClass('disabled');
 			var vBarHeight = vScaleFactor * jqScrollTrack.height();
 			var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
 			if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
 			jqScrollbar.height(vBarHeight);
-			jqScrollbar.css({top: this.getScrollPos().y * (jqScrollTrack.height() - vBarHeight) / (this.scrollLayerHeight - this.scrollOverflowHeight)});
+			jqScrollbar.css({top: this.getScrollPos().y * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
 		},
 
 		/**
@@ -1022,23 +1057,38 @@
 			this.el.on('mousemove.table', function (e) {
 				this.clientX = e.clientX;
 				this.clientY = e.clientY;
+
+				if (this.scrollParams.isVscrolling) {
+					var jqScrollTrack = this.el.find('.vscroll:first .scroll-track');
+					var jqScrollbar = jqScrollTrack.find('.scrollbar');
+					var maxScroll = jqScrollTrack.height() - jqScrollbar.outerHeight();
+					var scroll = this.clientY - jqScrollTrack.offset().top - this.scrollParams.vBarOffsetY;
+					if (scroll < 0) scroll = 0;
+					var scrollPercent = (scroll / maxScroll * 100) + '%';
+					this.scrollTo(scrollPercent);
+				}
+
 			}.bind(this));
 
 			this.el.on('mousewheel.table', function (e, deltaY, deltaX) {
-				var acceleration = this.vscrollAcceleration;
-				var scrollY = this.getScrollPos().y;
+				if (!this.scrollParams.vertical) return;
+				var acceleration = this.scrollParams.vAcceleration;
+				var scrollY = this.scrollParams.vPos;
 				deltaY = deltaY * acceleration;
 				deltaY = deltaY > 0 ? Math.ceil(deltaY) : Math.floor(deltaY);
 				this.scrollTo(scrollY - deltaY);
 				e.preventDefault();
 			}.bind(this));
 
-			this.el.on('mousedown.table', '.vscroll .scroll-track', function (e) {
-				var jqScrollTrack = $(e.currentTarget);
-				if (!this.isVscrolling) {
+			this.el.on('mousedown.table', '.vscroll .scrollbar', function (e) {
+				var jqScrollbar = $(e.currentTarget);
+				this.scrollParams.vBarOffsetY = e.offsetY;
+				this.scrollParams.isVscrolling = true;
+			}.bind(this));
 
-				}
-				this.isVscrolling = true;
+			this.el.on('mouseup.table', function (e) {
+				this.scrollParams.isVscrolling = false;
+				this.scrollParams.isHscrolling = false;
 			}.bind(this));
 
 			//sort
@@ -1141,7 +1191,9 @@
 			//table mouseleave
 			this.el.on('mouseleave.table', '.dtable', function () {
 				fnMouseOutRow(self.el.find('tr.hovered:not(.focused)'));
-			});
+				this.scrollParams.isVscrolling = false;
+				this.scrollParams.isHscrolling = false;
+			}.bind(this));
 
 			//fields mouseenter
 			this.el.on('mouseenter.table', 'tr:not(.focused)', function (e) {
@@ -1551,8 +1603,8 @@
 			var table = p.table;
 			var classes = '';
 			classes = '.' + p.sTableName;
-			if (table.vscroll) classes += '.has-vscroll';
-			if (table.hscroll) classes += '.has-hscroll';
+			if (table.scrollParams.vertical) classes += '.has-vscroll';
+			if (table.scrollParams.horizontal) classes += '.has-hscroll';
 			return context.ActiveTable.Haml.toHtml(["%div." + classes,
 				['.table-wrap',
 					['.widgets'],
@@ -1572,12 +1624,14 @@
 		},
 
 		tbody: function (p) {
-			if (!p.table.vscroll) return context.ActiveTable.Haml.toHtml(["%tbody", p.rows]);
+			if (!p.table.scrollParams.vertical) return context.ActiveTable.Haml.toHtml(["%tbody", p.rows]);
 			var colspan = p.table.visibleFields.length;
 			if (p.table.selectable) colspan++;
 			return context.ActiveTable.Haml.toHtml(["%tbody",
-				['%tr', ['%td.vscroll-overflow', {colspan: colspan},
-					['%table.vscroll-layer', p.rows]
+				['%tr.vscroll-overflow-tr', ['%td.vscroll-overflow-td', {colspan: colspan},
+					['%div.vscroll-overflow',
+						['%table.vscroll-layer', p.rows]
+					]
 				]]
 			]);
 		},
@@ -1724,7 +1778,7 @@
 		},
 
 		vscroll: function (p) {
-			if (!p.table.vscroll) return '';
+			if (!p.table.scrollParams.vertical) return '';
 			return context.ActiveTable.Haml.toHtml(['.vscroll',
 				['.scroll-btn.scroll-up'],
 				['.scroll-track', ['.scrollbar']],
@@ -1733,7 +1787,7 @@
 		},
 
 		hscroll: function (p) {
-			if (!p.table.hscroll) return '';
+			if (!p.table.scrollParams.horizontal) return '';
 			return context.ActiveTable.Haml.toHtml(['.hscroll',
 				['.scroll-btn.scroll-left'],
 				['.scroll-track', ['.scrollbar']],
@@ -1751,90 +1805,3 @@
 	});
 
 })(window);
-
-
-
-/*! Copyright (c) 2011 Brandon Aaron (http://brandonaaron.net)
- * Licensed under the MIT License (LICENSE.txt).
- *
- * Thanks to: http://adomas.org/javascript-mouse-wheel/ for some pointers.
- * Thanks to: Mathias Bank(http://www.mathias-bank.de) for a scope bug fix.
- * Thanks to: Seamus Leahy for adding deltaX and deltaY
- *
- * Version: 3.0.6
- *
- * Requires: 1.2.2+
- */
-
-(function($) {
-
-	var types = ['DOMMouseScroll', 'mousewheel'];
-
-	if ($.event.fixHooks) {
-		for ( var i=types.length; i; ) {
-			$.event.fixHooks[ types[--i] ] = $.event.mouseHooks;
-		}
-	}
-
-	$.event.special.mousewheel = {
-		setup: function() {
-			if ( this.addEventListener ) {
-				for ( var i=types.length; i; ) {
-					this.addEventListener( types[--i], handler, false );
-				}
-			} else {
-				this.onmousewheel = handler;
-			}
-		},
-
-		teardown: function() {
-			if ( this.removeEventListener ) {
-				for ( var i=types.length; i; ) {
-					this.removeEventListener( types[--i], handler, false );
-				}
-			} else {
-				this.onmousewheel = null;
-			}
-		}
-	};
-
-	$.fn.extend({
-		mousewheel: function(fn) {
-			return fn ? this.bind("mousewheel", fn) : this.trigger("mousewheel");
-		},
-
-		unmousewheel: function(fn) {
-			return this.unbind("mousewheel", fn);
-		}
-	});
-
-
-	function handler(event) {
-		var orgEvent = event || window.event, args = [].slice.call( arguments, 1 ), delta = 0, returnValue = true, deltaX = 0, deltaY = 0;
-		event = $.event.fix(orgEvent);
-		event.type = "mousewheel";
-
-		// Old school scrollwheel delta
-		if ( orgEvent.wheelDelta ) { delta = orgEvent.wheelDelta/120; }
-		if ( orgEvent.detail     ) { delta = -orgEvent.detail/3; }
-
-		// New school multidimensional scroll (touchpads) deltas
-		deltaY = delta;
-
-		// Gecko
-		if ( orgEvent.axis !== undefined && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
-			deltaY = 0;
-			deltaX = -1*delta;
-		}
-
-		// Webkit
-		if ( orgEvent.wheelDeltaY !== undefined ) { deltaY = orgEvent.wheelDeltaY/120; }
-		if ( orgEvent.wheelDeltaX !== undefined ) { deltaX = -1*orgEvent.wheelDeltaX/120; }
-
-		// Add event and delta to the front of the arguments
-		args.unshift(event, delta, deltaX, deltaY);
-
-		return ($.event.dispatch || $.event.handle).apply(this, args);
-	}
-
-})(jQuery);
