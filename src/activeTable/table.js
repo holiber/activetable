@@ -19,7 +19,9 @@
 			hscroll: false,
 			vAcceleration: 10,
 			hAcceleration: 10,
-			autoSizing: true
+			autoSizing: true,
+			vPos: 0,
+			hPos: 0
 		},
 		widgets: {},
 		widgetsOrder: [],
@@ -392,8 +394,10 @@
 				hPos: 0,
 				vAcceleration: null,
 				hAcceleration: null,
-				scrollOverflowHeight: 0,
-				scrollLayerHeight: 0,
+				overflowHeight: 0,
+				layerHeight: 0,
+				overflowWidth: 0,
+				layerWidth: 0,
 				autoSizing: true,
 				isVscrolling: false,
 				isHscrolling: false,
@@ -427,7 +431,7 @@
 			this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
 			this.showOnlyDescribed = this.params.showOnlyDescribed;
 			this.el = this.params.el;
-			this.scrollParams = $.extend({}, DEFAULT_OPTIONS, this.params.scrollParams);
+			this.scrollParams = $.extend({}, DEFAULT_OPTIONS.scrollParams, this.params.scrollParams);
 
 			this.setData(this.params.data);
 			this.setFields(this.params.fields);
@@ -608,19 +612,6 @@
 
 				this.resize();
 
-				if (this.scrollParams.autoSizing) {
-					for (var i = 0; i < this.visibleFields.length; i++) {
-						var fieldName = this.visibleFields[i];
-						var selector = ActiveTable.utils.toScore(fieldName);
-						var jqTh = this.el.find('.dtable th.col-' + selector + ':first');
-						var jqTd = this.el.find('.dtable td.col-' + selector + ':first');
-						var tdWidth = jqTd.width();
-						jqTh.width(tdWidth);
-						var thWidth = jqTh.width();
-						if (thWidth > tdWidth) jqTd.width(thWidth);
-					}
-				}
-
 			}
 
 			//fix column width
@@ -639,15 +630,57 @@
 		 *  resize table in scroll mode
 		 */
 		resize: function () {
-			var jqOverflow = this.el.find('.vscroll-overflow:first');
-			jqOverflow.css({height: 'auto'});
-			var height = this.el.height();
-			var wrapHeight = this.el.find('.table-wrap:first').height();
-			var freeHeight = height - wrapHeight;
-			jqOverflow.height(jqOverflow.height() + freeHeight);
-			this.scrollParams.overflowHeight = jqOverflow.height();
-			this.scrollParams.layerHeight = this.el.find('.vscroll-layer:first').height();
-			this.scrollTo(this.scrollParams.vPos);
+
+			//resize table header
+			if (this.scrollParams.autoSizing) {
+				var widths = [];
+				var jqThs = this.el.find('.data-table > thead:first tr:first > th');
+				jqThs.outerWidth(0);
+				this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
+					widths.push($(this).outerWidth());
+				});
+				var i = 0;
+				jqThs.each(function () {
+					$(this).outerWidth(widths[i]);
+					i++;
+				});
+			}
+
+
+			if (this.scrollParams.horizontal) {
+				var jqHOverflow = this.el.find('.hscroll-overflow');
+				jqHOverflow.css({height: 'auto'});
+				var height = this.el.height();
+				var wrapHeight = this.el.find('.table-wrap').outerHeight();
+				var freeHeight = height - wrapHeight;
+				jqHOverflow.height(jqHOverflow.height() + freeHeight);
+				this.scrollParams.overflowWidth = jqHOverflow.width();
+				this.scrollParams.layerWidth = this.el.find('.hscroll-layer').width();
+
+				var jqVOverflow = this.el.find('.vscroll-overflow');
+				jqVOverflow.css({height: 'auto'});
+				jqVOverflow.height(this.el.find('.vscroll-overflow-td').parent().height());
+				this.scrollParams.overflowHeight = jqVOverflow.height();
+				this.scrollParams.layerHeight = jqVOverflow.find('.vscroll-layer').height();
+			} else if (this.scrollParams.vertical) {
+				var jqVOverflow = this.el.find('.vscroll-overflow');
+				jqVOverflow.css({height: 'auto'});
+				var height = this.el.height();
+				var wrapHeight = this.el.find('.table-wrap').outerHeight();
+				var freeHeight = height - wrapHeight;
+				jqVOverflow.height(jqVOverflow.height() + freeHeight);
+				this.scrollParams.overflowHeight = jqVOverflow.height();
+				this.scrollParams.layerHeight = this.el.find('.vscroll-layer').height();
+
+				var jqHscrollLayer = this.el.find('.hscroll-layer');
+				this.el.find('.hscroll-overflow').css({height: 'auto'});
+				if (this.scrollParams.horizontal) this.el.find('.hscroll-overflow').height(jqHscrollLayer.height());
+				this.scrollParams.overflowWidth = this.el.find('.hscroll-overflow').width();
+				this.scrollParams.layerWidth = this.el.find('.hscroll-layer').outerWidth();
+			}
+
+			this.scrollTo(this.scrollParams.vPos, this.scrollParams.hPos);
+			this.emit('resize');
 		},
 
 		disable: function () {
@@ -961,37 +994,75 @@
 		 */
 		scrollTo: function (offsetY, offsetX) {
 
-			//set scroll layer position
-			var maxVscroll = this.scrollParams.layerHeight - this.scrollParams.overflowHeight;
-			if (maxVscroll < 0) maxVscroll = 0;
+			if (offsetY !== undefined && this.scrollParams.vertical) {
+			//set vertical scroll layer position
+				var maxVscroll = this.scrollParams.layerHeight - this.scrollParams.overflowHeight;
+				if (maxVscroll < 0) maxVscroll = 0;
 
-			//if offsetY in percent
-			if (String(offsetY).indexOf('%') != -1) {
-				var percent = Number(offsetY.split('%')[0]);
-				offsetY = (percent/100) * maxVscroll;
+				//if offsetY in percent
+				if (String(offsetY).indexOf('%') != -1) {
+					var percent = Number(offsetY.split('%')[0]);
+					offsetY = (percent/100) * maxVscroll;
+				}
+
+				if (offsetY < 0 || !offsetY) offsetY = 0;
+
+				if (offsetY > maxVscroll) offsetY = maxVscroll;
+				this.layout.find('.vscroll-layer:first').css({top: -offsetY});
+				this.scrollParams.vPos = offsetY;
+
+				//set scrollbar
+				var jqVscroll = this.el.find('.vscroll:first');
+				var jqScrollTrack =  jqVscroll.find('.scroll-track');
+				var jqScrollbar = jqScrollTrack.find('.scrollbar');
+				var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
+				if (vScaleFactor > 1) {
+					jqVscroll.addClass('disabled');
+					return;
+				}
+				jqVscroll.removeClass('disabled');
+				var vBarHeight = vScaleFactor * jqScrollTrack.height();
+				var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
+				if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
+				jqScrollbar.height(vBarHeight);
+				jqScrollbar.css({top: this.getScrollPos().y * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
 			}
 
-			if (offsetY < 0 || !offsetY) offsetY = 0;
 
-			if (offsetY > maxVscroll) offsetY = maxVscroll;
-			this.layout.find('.vscroll-layer:first').css({top: -offsetY});
-			this.scrollParams.vPos = offsetY;
+			if (offsetX !== undefined && this.scrollParams.horizontal) {
+				//set vertical scroll layer position
+				var maxHscroll = this.scrollParams.layerWidth - this.scrollParams.overflowWidth;
+				if (maxHscroll < 0) maxHscroll = 0;
 
-			//set scrollbar
-			var jqVscroll = this.el.find('.vscroll:first');
-			var jqScrollTrack =  jqVscroll.find('.scroll-track');
-			var jqScrollbar = jqScrollTrack.find('.scrollbar');
-			var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
-			if (vScaleFactor > 1) {
-				jqVscroll.addClass('disabled');
-				return;
+				//if offsetX in percent
+				if (String(offsetX).indexOf('%') != -1) {
+					var percent = Number(offsetX.split('%')[0]);
+					offsetX = (percent/100) * maxHscroll;
+				}
+
+				if (offsetX < 0 || !offsetX) offsetX = 0;
+
+				if (offsetX > maxHscroll) offsetX = maxHscroll;
+				this.layout.find('.hscroll-layer:first').css({left: -offsetX});
+				this.scrollParams.hPos = offsetX;
+
+				//set scrollbar
+				var jqHscroll = this.el.find('.hscroll:first');
+				var jqScrollTrack =  jqHscroll.find('.scroll-track');
+				var jqScrollbar = jqScrollTrack.find('.scrollbar');
+				var hScaleFactor = this.scrollParams.overflowWidth / this.scrollParams.layerWidth;
+				if (hScaleFactor >= 1) {
+					jqHscroll.addClass('disabled');
+					return;
+				}
+				jqHscroll.removeClass('disabled');
+				var hBarWidth = hScaleFactor * jqScrollTrack.width();
+				var hBarMinWidth = jqScrollbar.css('min-width').split('px')[0];
+				if (hBarWidth < hBarMinWidth) hBarWidth = hBarMinWidth;
+				jqScrollbar.width(hBarWidth);
+				jqScrollbar.css({left: this.scrollParams.hPos * (jqScrollTrack.width() - hBarWidth) / (this.scrollParams.layerWidth - this.scrollParams.overflowWidth)});
 			}
-			jqVscroll.removeClass('disabled');
-			var vBarHeight = vScaleFactor * jqScrollTrack.height();
-			var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
-			if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
-			jqScrollbar.height(vBarHeight);
-			jqScrollbar.css({top: this.getScrollPos().y * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
+
 		},
 
 		/**
@@ -1057,15 +1128,28 @@
 			this.el.on('mousemove.table', function (e) {
 				this.clientX = e.clientX;
 				this.clientY = e.clientY;
+				this.pageX = e.pageX;
+				this.pageY = e.pageY;
 
 				if (this.scrollParams.isVscrolling) {
 					var jqScrollTrack = this.el.find('.vscroll:first .scroll-track');
 					var jqScrollbar = jqScrollTrack.find('.scrollbar');
 					var maxScroll = jqScrollTrack.height() - jqScrollbar.outerHeight();
-					var scroll = this.clientY - jqScrollTrack.offset().top - this.scrollParams.vBarOffsetY;
+					var scroll = this.pageY - jqScrollTrack.offset().top - this.scrollParams.vBarOffsetY;
 					if (scroll < 0) scroll = 0;
 					var scrollPercent = (scroll / maxScroll * 100) + '%';
 					this.scrollTo(scrollPercent);
+				}
+
+
+				if (this.scrollParams.isHscrolling) {
+					var jqScrollTrack = this.el.find('.hscroll:first .scroll-track');
+					var jqScrollbar = jqScrollTrack.find('.scrollbar');
+					var maxScroll = jqScrollTrack.width() - jqScrollbar.outerWidth();
+					var scroll = this.pageX - jqScrollTrack.offset().left - this.scrollParams.hBarOffsetX;
+					if (scroll < 0) scroll = 0;
+					var scrollPercent = (scroll / maxScroll * 100) + '%';
+					this.scrollTo(undefined, scrollPercent);
 				}
 
 			}.bind(this));
@@ -1082,8 +1166,14 @@
 
 			this.el.on('mousedown.table', '.vscroll .scrollbar', function (e) {
 				var jqScrollbar = $(e.currentTarget);
-				this.scrollParams.vBarOffsetY = e.offsetY;
+				this.scrollParams.vBarOffsetY = e.offsetY || e.originalEvent.layerY;
 				this.scrollParams.isVscrolling = true;
+			}.bind(this));
+
+			this.el.on('mousedown.table', '.hscroll .scrollbar', function (e) {
+				var jqScrollbar = $(e.currentTarget);
+				this.scrollParams.hBarOffsetX = e.offsetX || e.originalEvent.layerX;
+				this.scrollParams.isHscrolling = true;
 			}.bind(this));
 
 			this.el.on('mouseup.table', function (e) {
@@ -1188,9 +1278,13 @@
 			};
 
 
-			//table mouseleave
+			//dtable mouseleave
 			this.el.on('mouseleave.table', '.dtable', function () {
 				fnMouseOutRow(self.el.find('tr.hovered:not(.focused)'));
+			}.bind(this));
+
+			//table mouseleave
+			this.el.on('mouseleave.table', function () {
 				this.scrollParams.isVscrolling = false;
 				this.scrollParams.isHscrolling = false;
 			}.bind(this));
@@ -1288,8 +1382,6 @@
 					~$.inArray(keyCode,ARROWS_BS_DEL)
 						|| (keyCode >= DIGIT_BOUNDS[0] && keyCode <= DIGIT_BOUNDS[1])
 						|| e.preventDefault();
-
-//					if (keyCode < 48 || keyCode > 57 || keyCode == 8) e.preventDefault();
 				}
 			});
 
@@ -1580,7 +1672,7 @@
 			}
 
 			tbody = table.templates.tbody({tpl: {tbody: true}, table: table, rows: rows});
-			ttable = table.templates.table({tpl: {table: true}, thead: thead, tbody: tbody});
+			ttable = table.templates.table({tpl: {table: true}, table: table, thead: thead, tbody: tbody});
 
 			var vscroll = table.templates.vscroll({tpl: {vscroll: true}, table: table});
 			var hscroll = table.templates.hscroll({tpl: {hscroll: true}, table: table});
@@ -1616,11 +1708,22 @@
 		},
 
 		table: function (p) {
-			return context.ActiveTable.Haml.toHtml(["%table.data-table.",
-				{cellspacing: "0"},
-				p.thead,
-				p.tbody
-			]);
+			if (!p.table.scrollParams.horizontal) {
+				return context.ActiveTable.Haml.toHtml(['%table.data-table.',
+					{cellspacing: "0"},
+					p.thead,
+					p.tbody
+				]);
+			}
+
+			return context.ActiveTable.Haml.toHtml(['.hscroll-overflow',
+				['%table.data-table.hscroll-layer',
+					{cellspacing: "0"},
+					p.thead,
+					p.tbody
+				]
+			])
+
 		},
 
 		tbody: function (p) {
@@ -1630,7 +1733,7 @@
 			return context.ActiveTable.Haml.toHtml(["%tbody",
 				['%tr.vscroll-overflow-tr', ['%td.vscroll-overflow-td', {colspan: colspan},
 					['%div.vscroll-overflow',
-						['%table.vscroll-layer', p.rows]
+						['%table.vscroll-layer', {cellspacing: "0"}, p.rows]
 					]
 				]]
 			]);

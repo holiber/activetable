@@ -152,8 +152,21 @@
 	height: 100%;
 }
 
+.active-table.has-vscroll .data-table,
+.active-table.has-hscroll .data-table {
+	height: 100%;
+}
+
+.active-table.has-hscroll .dtable {
+	padding-bottom: 12px;
+}
+
 .active-table.has-vscroll .data-table {
 	border-right: none;
+}
+
+.active-table.has-hscroll .data-table {
+	border-left: none;
 }
 
 .active-table .vscroll-overflow {
@@ -172,35 +185,41 @@
 
 .active-table .scroll-btn {
 	position: absolute;
-	width: 11px;
-	height: 10px;
 	border: 1px solid #d0d0d0;
+	background-color: #e9e9e9;
+}
+
+.active-table .vscroll .scroll-btn {
 	border-right: 1px;
 }
 
 .active-table .scroll-up {
 	top: 50px;
 	right: 0;
+	width: 11px;
+	height: 11px;
 }
 
 
 .active-table .scroll-down {
 	bottom: 0px;
 	right: 0;
+	width: 11px;
+	height: 11px;
 }
 
-.active-table .scroll-track {
+.active-table .vscroll .scroll-track {
 	background-color: #f9f9f9;
 	width: 11px;
 	position: absolute;
-	top: 61px;
-	bottom: 11px;
+	top: 62px;
+	bottom: 12px;
 	border: 1px solid #d0d0d0;
 	border-right: none;
 	cursor: default;
 }
 
-.active-table .scrollbar{
+.active-table .vscroll .scrollbar{
 	width: 11px;
 	min-height: 10px;
 	background-color: #d7d7d7;
@@ -211,7 +230,8 @@
 	cursor: default;
 }
 
-.active-table .vscroll.disabled .scrollbar{
+.active-table .vscroll.disabled .scrollbar,
+.active-table .hscroll.disabled .scrollbar{
 	display: none;
 }
 
@@ -221,6 +241,7 @@
 
 .active-table .vscroll-overflow-td {
 	padding: 0;
+	height: 100%;
 }
 
 .active-table .vscroll-overflow {
@@ -234,4 +255,73 @@
 	position: absolute;
 	width: 100%;
 	top: 0;
+}
+
+.active-table .hscroll-overflow {
+	position: relative;
+	overflow: hidden;
+	padding: 0;
+	border-left: 1px solid #d0d0d0;
+}
+
+.active-table .hscroll-layer {
+	position: absolute;
+}
+
+.active-table.has-hscroll .data-table thead,
+.active-table.has-vscroll .data-table thead {
+	white-space: nowrap;
+}
+
+.active-table.has-hscroll .data-table th,
+.active-table.has-vscroll .data-table th{
+	display: inline-block;
+}
+
+.active-table .hscroll {
+	position: absolute;
+	width: 100%;
+	/*border-right: 1px solid #d0d0d0;*/
+	height: 12px;
+	bottom: 0;
+	left: 0;
+}
+
+.active-table .scroll-left {
+	top: 0px;
+	left: 0;
+	width: 11px;
+	height: 11px;
+	border-top: 0;
+}
+
+
+.active-table .scroll-right {
+	top: 0px;
+	right: 12px;
+	width: 11px;
+	height: 11px;
+	border-top: 0;
+}
+
+.active-table .hscroll .scroll-track {
+	background-color: #f9f9f9;
+	height: 11px;
+	position: absolute;
+	left: 12px;
+	right: 22px;
+	border: 1px solid #d0d0d0;
+	border-top: 0;
+	cursor: default;
+}
+
+.active-table .hscroll .scrollbar{
+	height: 11px;
+	min-width: 10px;
+	background-color: #d7d7d7;
+	position: absolute;
+	left: 0;
+	border-left: 1px solid #d0d0d0;
+	border-right: 1px solid #d0d0d0;
+	cursor: default;
 }
