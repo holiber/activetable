@@ -1014,7 +1014,7 @@
 				//set scrollbar
 				var jqVscroll = this.el.find('.vscroll:first');
 				var jqScrollTrack =  jqVscroll.find('.scroll-track');
-				var jqScrollbar = jqScrollTrack.find('.scrollbar');
+				var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
 				var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
 				if (vScaleFactor > 1) {
 					jqVscroll.addClass('disabled');
@@ -1049,7 +1049,7 @@
 				//set scrollbar
 				var jqHscroll = this.el.find('.hscroll:first');
 				var jqScrollTrack =  jqHscroll.find('.scroll-track');
-				var jqScrollbar = jqScrollTrack.find('.scrollbar');
+				var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
 				var hScaleFactor = this.scrollParams.overflowWidth / this.scrollParams.layerWidth;
 				if (hScaleFactor >= 1) {
 					jqHscroll.addClass('disabled');
@@ -1133,7 +1133,7 @@
 
 				if (this.scrollParams.isVscrolling) {
 					var jqScrollTrack = this.el.find('.vscroll:first .scroll-track');
-					var jqScrollbar = jqScrollTrack.find('.scrollbar');
+					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
 					var maxScroll = jqScrollTrack.height() - jqScrollbar.outerHeight();
 					var scroll = this.pageY - jqScrollTrack.offset().top - this.scrollParams.vBarOffsetY;
 					if (scroll < 0) scroll = 0;
@@ -1144,7 +1144,7 @@
 
 				if (this.scrollParams.isHscrolling) {
 					var jqScrollTrack = this.el.find('.hscroll:first .scroll-track');
-					var jqScrollbar = jqScrollTrack.find('.scrollbar');
+					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
 					var maxScroll = jqScrollTrack.width() - jqScrollbar.outerWidth();
 					var scroll = this.pageX - jqScrollTrack.offset().left - this.scrollParams.hBarOffsetX;
 					if (scroll < 0) scroll = 0;
@@ -1164,13 +1164,13 @@
 				e.preventDefault();
 			}.bind(this));
 
-			this.el.on('mousedown.table', '.vscroll .scrollbar', function (e) {
+			this.el.on('mousedown.table', '.vscroll .at-scrollbar', function (e) {
 				var jqScrollbar = $(e.currentTarget);
 				this.scrollParams.vBarOffsetY = e.offsetY || e.originalEvent.layerY;
 				this.scrollParams.isVscrolling = true;
 			}.bind(this));
 
-			this.el.on('mousedown.table', '.hscroll .scrollbar', function (e) {
+			this.el.on('mousedown.table', '.hscroll .at-scrollbar', function (e) {
 				var jqScrollbar = $(e.currentTarget);
 				this.scrollParams.hBarOffsetX = e.offsetX || e.originalEvent.layerX;
 				this.scrollParams.isHscrolling = true;
@@ -1884,7 +1884,7 @@
 			if (!p.table.scrollParams.vertical) return '';
 			return context.ActiveTable.Haml.toHtml(['.vscroll',
 				['.scroll-btn.scroll-up'],
-				['.scroll-track', ['.scrollbar']],
+				['.scroll-track', ['.at-scrollbar']],
 				['.scroll-btn.scroll-down']
 			]);
 		},
@@ -1893,7 +1893,7 @@
 			if (!p.table.scrollParams.horizontal) return '';
 			return context.ActiveTable.Haml.toHtml(['.hscroll',
 				['.scroll-btn.scroll-left'],
-				['.scroll-track', ['.scrollbar']],
+				['.scroll-track', ['.at-scrollbar']],
 				['.scroll-btn.scroll-right']
 			]);
 		},

@@ -219,7 +219,7 @@
 	cursor: default;
 }
 
-.active-table .vscroll .scrollbar{
+.active-table .vscroll .at-scrollbar{
 	width: 11px;
 	min-height: 10px;
 	background-color: #d7d7d7;
@@ -230,8 +230,8 @@
 	cursor: default;
 }
 
-.active-table .vscroll.disabled .scrollbar,
-.active-table .hscroll.disabled .scrollbar{
+.active-table .vscroll.disabled .at-scrollbar,
+.active-table .hscroll.disabled .at-scrollbar{
 	display: none;
 }
 
@@ -315,7 +315,7 @@
 	cursor: default;
 }
 
-.active-table .hscroll .scrollbar{
+.active-table .hscroll .at-scrollbar{
 	height: 11px;
 	min-width: 10px;
 	background-color: #d7d7d7;
