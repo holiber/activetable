@@ -278,6 +278,7 @@
 .active-table.has-hscroll .data-table th,
 .active-table.has-vscroll .data-table th{
 	display: inline-block;
+	white-space: normal;
 }
 
 .active-table.has-hscroll .data-table tfoot td,
