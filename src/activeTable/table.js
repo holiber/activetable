@@ -428,6 +428,7 @@
 			this.on = this.params.on;
 			this.sort = this.params.sort;
 			this.helper = this.params.helper;
+			this.hasFooter = this.params.hasFooter;
 			this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
 			this.showOnlyDescribed = this.params.showOnlyDescribed;
 			this.el = this.params.el;
@@ -493,7 +494,8 @@
 			if (options.selectable !== undefined) this.selectable = options.selectable;
 			if (options.helper) this.helper = options.helper;
 			if (options.on) this.on = options.on;
-			if (options.sort) this.sort = sort;
+			if (options.sort) this.sort = options.sort;
+			if (options.hasFooter) this.hasFooter = options.hasFooter;
 			if (options.templates) this.setTemplates(options.templates);
 			if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
 			if (options.order) this.order = options.order
@@ -511,14 +513,13 @@
 		},
 
 		setTemplates: function (templates) {
-			if ($.isFunction(templates)) templates = {columns: templates, cells: templates};
+			if ($.isFunction(templates)) templates = {columns: templates, cells: templates, feet: templates};
 			this.templates = $.extend(true, {}, this.defaultTemplates, templates);
 		},
 
 		setFields: function (fields) {
 			fields = fields || this.fields;
 			var additionalFields = [];
-			var reduced = $.extend({rows: [], columns: []}, this.params.data);
 
 			//set described fields
 			for (var fieldName in fields) {
@@ -631,20 +632,32 @@
 		 */
 		resize: function () {
 
-			//resize table header
+			//resize table header and footer
 			if (this.scrollParams.autoSizing) {
 				var widths = [];
 				var jqThs = this.el.find('.data-table > thead:first tr:first > th');
 				jqThs.outerWidth(0);
+
 				this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
 					widths.push($(this).outerWidth());
 				});
+
 				var i = 0;
 				jqThs.each(function () {
 					$(this).outerWidth(widths[i]);
 					i++;
 				});
+
+				if (this.hasFooter) {
+					var jqFeet = this.el.find('.data-table > tfoot:first tr:first > td');
+					i = 0;
+					jqFeet.each(function () {
+						$(this).outerWidth(widths[i]);
+						i++;
+					});
+				}
 			}
+
 
 
 			if (this.scrollParams.horizontal) {
@@ -660,17 +673,22 @@
 				var jqVOverflow = this.el.find('.vscroll-overflow');
 				jqVOverflow.css({height: 'auto'});
 				jqVOverflow.height(this.el.find('.vscroll-overflow-td').parent().height());
-				this.scrollParams.overflowHeight = jqVOverflow.height();
-				this.scrollParams.layerHeight = jqVOverflow.find('.vscroll-layer').height();
+
+				//firefox table fix
+				var theadHeight = jqHOverflow.find('thead:first').outerHeight();
+				var tfootHeight = jqHOverflow.find('tfoot:first').outerHeight() || 0;
+				var freeTableHeight = jqHOverflow.height() - theadHeight - tfootHeight;
+				jqVOverflow.height(freeTableHeight);
+				this.el.find('.vscroll-overflow-td').height(freeTableHeight);
+
 			} else if (this.scrollParams.vertical) {
+
 				var jqVOverflow = this.el.find('.vscroll-overflow');
 				jqVOverflow.css({height: 'auto'});
 				var height = this.el.height();
 				var wrapHeight = this.el.find('.table-wrap').outerHeight();
 				var freeHeight = height - wrapHeight;
 				jqVOverflow.height(jqVOverflow.height() + freeHeight);
-				this.scrollParams.overflowHeight = jqVOverflow.height();
-				this.scrollParams.layerHeight = this.el.find('.vscroll-layer').height();
 
 				var jqHscrollLayer = this.el.find('.hscroll-layer');
 				this.el.find('.hscroll-overflow').css({height: 'auto'});
@@ -678,6 +696,9 @@
 				this.scrollParams.overflowWidth = this.el.find('.hscroll-overflow').width();
 				this.scrollParams.layerWidth = this.el.find('.hscroll-layer').outerWidth();
 			}
+
+			this.scrollParams.overflowHeight = jqVOverflow.height();
+			this.scrollParams.layerHeight = this.el.find('.vscroll-layer').height();
 
 			this.scrollTo(this.scrollParams.vPos, this.scrollParams.hPos);
 			this.emit('resize');
@@ -979,11 +1000,6 @@
 			this.sort = state.sort;
 		},
 
-		getScrollPos: function () {
-			var y = this.el.find('.vscroll-layer:first').position().top;
-			return {x: 0, y: -y}
-		},
-
 		/**
 		 * scroll to posiniton in pixels or percent
 		 * @example
@@ -1025,7 +1041,7 @@
 				var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
 				if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
 				jqScrollbar.height(vBarHeight);
-				jqScrollbar.css({top: this.getScrollPos().y * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
+				jqScrollbar.css({top: this.scrollParams.vPos * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
 			}
 
 
@@ -1554,13 +1570,14 @@
 	ActiveTable.installDefaultTemplates({
 
 		renderer: function (table) {
-			var layout, ttable, tbody, thead, pagination;
+			var layout, ttable, tbody, thead, tfoot, pagination;
 
 			pagination = table.templates.pagination({tpl: {pagination: true}, table: table});
 
 			// COLUMNS:
 
 			var columns = '';
+			var feet = '';
 			var fieldName = '';
 
 			if (table.selectable) columns += table.templates.checkboxHead({tplCheckboxHead: true, table: table});
@@ -1588,7 +1605,12 @@
 				};
 				columnParams.tpl.field[fieldName] = true;
 
+				var footParams = $.extend({}, columnParams);
+				delete footParams.tpl.column;
+				footParams.tpl.foot = true;
+
 				var content = '';
+				var footContent = '';
 
 				if ($.isFunction(table.templates.columns)) {
 					content = table.templates.columns(columnParams).trim();
@@ -1598,16 +1620,31 @@
 
 				if (content === '') content = field.title || fieldName;
 
+
+				if ($.isFunction(table.templates.feet)) {
+					footContent = table.templates.feet(footParams).trim();
+				} else if (table.templates.feet[fieldName]) {
+					footContent = table.templates.feet[fieldName](footParams);
+				}
+
 				var columnWrapParams = columnParams;
-				columnWrapParams.tpl = {columnWrap: true,field: {}}
+				columnWrapParams.tpl = {columnWrap: true,field: {}};
 				columnWrapParams['tpl']['field'][fieldName] = true;
+
+				var footWrapParams = $.extend({}, columnWrapParams);
+				footWrapParams.tpl = {footWrap: true, field: {}};
+				columnWrapParams['tpl']['field'][fieldName] = true;
+
 				columnWrapParams.content = content;
+				footWrapParams.content = footContent;
 
 				var column = table.templates.columnWrap(columnParams);
+				var foot = table.templates.footWrap(footWrapParams);
 				columns += column;
+				feet += foot;
 			}
 			thead = table.templates.thead({tpl: {thead: true}, table: table, columns: columns});
-
+			if (table.hasFooter) tfoot = table.templates.tfoot({tpl: {tfoot: true}, table: table, columns: feet});
 
 			// ROWS:
 
@@ -1672,7 +1709,7 @@
 			}
 
 			tbody = table.templates.tbody({tpl: {tbody: true}, table: table, rows: rows});
-			ttable = table.templates.table({tpl: {table: true}, table: table, thead: thead, tbody: tbody});
+			ttable = table.templates.table({tpl: {table: true}, table: table, thead: thead, tbody: tbody, tfoot: tfoot});
 
 			var vscroll = table.templates.vscroll({tpl: {vscroll: true}, table: table});
 			var hscroll = table.templates.hscroll({tpl: {hscroll: true}, table: table});
@@ -1712,6 +1749,7 @@
 				return context.ActiveTable.Haml.toHtml(['%table.data-table.',
 					{cellspacing: "0"},
 					p.thead,
+					p.tfoot,
 					p.tbody
 				]);
 			}
@@ -1720,6 +1758,7 @@
 				['%table.data-table.hscroll-layer',
 					{cellspacing: "0"},
 					p.thead,
+					p.tfoot,
 					p.tbody
 				]
 			])
@@ -1741,6 +1780,10 @@
 
 		thead: function (params) {
 			return context.ActiveTable.Haml.toHtml(["%thead", ["%tr", params.columns]]);
+		},
+
+		tfoot: function (params) {
+			return context.ActiveTable.Haml.toHtml(["%tfoot", ["%tr", params.columns]]);
 		},
 
 		trow: function (p) {
@@ -1864,8 +1907,16 @@
 			return context.ActiveTable.Haml.toHtml(["%th.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, params.content]);
 		},
 
+
+		footWrap: function (params) {
+			var isFirst = params.isFirst ? '.col-first' : '';
+			var isLast = params.isFirst ? '.col-last' : '';
+			var type = params.type ? '.' + params.type : '';
+			var sort = params.sort ? '.' + params.sort : '';
+			return context.ActiveTable.Haml.toHtml(["%td.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, params.content]);
+		},
+
 		cellWrap: function (p) {
-			var table = p.table;
 			var sort = (p.sort ? '.' + p.sort: '');
 			var attr = {rel: p.fieldName, value: p.row[p.fieldName]};
 			var editable = (p.cell.editable ? ".editable" : "");
@@ -1903,6 +1954,10 @@
 		},
 
 		cells: {
+
+		},
+
+		feet: {
 
 		}
 	});
