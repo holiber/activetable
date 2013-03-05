@@ -1606,8 +1606,8 @@
 				columnParams.tpl.field[fieldName] = true;
 
 				var footParams = $.extend({}, columnParams);
-				delete footParams.tpl.column;
-				footParams.tpl.foot = true;
+				footParams.tpl = {foot: true, field: {}}
+				footParams.tpl.field[fieldName] = true;
 
 				var content = '';
 				var footContent = '';
