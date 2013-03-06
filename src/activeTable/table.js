@@ -1580,7 +1580,10 @@
 			var feet = '';
 			var fieldName = '';
 
-			if (table.selectable) columns += table.templates.checkboxHead({tplCheckboxHead: true, table: table});
+			if (table.selectable) {
+				columns += table.templates.checkboxHead({tplCheckboxHead: true, table: table});
+				feet += table.templates.checkboxFoot({tplCheckboxFoot: true, table: table});
+			}
 
 			for (var key = 0; key < table.visibleFields.length; key++) {
 				fieldName = table.visibleFields[key];
@@ -1851,6 +1854,11 @@
 
 		checkboxCell: function (p) {
 			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox.col-first", {rel: p.row.idx}, [".checkbox", {rel: p.row.idx}]]);
+		},
+
+
+		checkboxFoot: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox"]);
 		},
 
 		pagination: function (p) {
