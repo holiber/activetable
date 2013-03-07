@@ -643,16 +643,22 @@
 				});
 
 				var i = 0;
+				var lastLeftPos = 0;
 				jqThs.each(function () {
 					$(this).outerWidth(widths[i]);
+					$(this).css({left: lastLeftPos});
+					lastLeftPos += widths[i];
 					i++;
 				});
 
+				lastLeftPos = 0;
 				if (this.hasFooter) {
 					var jqFeet = this.el.find('.data-table > tfoot:first tr:first > td');
 					i = 0;
 					jqFeet.each(function () {
 						$(this).outerWidth(widths[i]);
+						$(this).css({left: lastLeftPos});
+						lastLeftPos += widths[i];
 						i++;
 					});
 				}

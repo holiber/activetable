@@ -19,6 +19,15 @@
 	background: -o-linear-gradient(90deg, #b0b0b0, #dadada 15%);
 	background: linear-gradient(90deg, #b0b0b0, #dadada 15%);
 }
+
+.active-table thead tr{
+	height: 50px;
+}
+
+.active-table tfoot tr{
+	height: 20px;
+}
+
 .data-table tbody td {padding:4px 9px;text-align:center;height: 16px;}
 .data-table .col-checkbox	{width:21px;}
 
@@ -158,6 +167,15 @@
 	height: 100%;
 }
 
+.active-table.has-vscroll th,
+.active-table.has-hscroll th,
+.active-table.has-vscroll tfoot td
+.active-table.has-hscroll tfoot td {
+	display: block;
+	position: absolute;
+}
+
+
 .active-table.has-hscroll .dtable {
 	padding-bottom: 12px;
 }
@@ -270,21 +288,21 @@
 	position: absolute;
 }
 
-.active-table.has-hscroll .data-table thead,
-.active-table.has-vscroll .data-table thead {
-	white-space: nowrap;
-}
+/*.active-table.has-hscroll .data-table thead,*/
+/*.active-table.has-vscroll .data-table thead {*/
+	/*white-space: nowrap;*/
+/*}*/
 
-.active-table.has-hscroll .data-table th,
-.active-table.has-vscroll .data-table th{
-	display: inline-block;
-	white-space: normal;
-}
+/*.active-table.has-hscroll .data-table th,*/
+/*.active-table.has-vscroll .data-table th{*/
+	/*display: inline-block;*/
+	/*white-space: normal;*/
+/*}*/
 
-.active-table.has-hscroll .data-table tfoot td,
-.active-table.has-vscroll .data-table tfoot td{
-	display: inline-block;
-}
+/*.active-table.has-hscroll .data-table tfoot td,*/
+/*.active-table.has-vscroll .data-table tfoot td{*/
+	/*display: inline-block;*/
+/*}*/
 
 .active-table .hscroll {
 	position: absolute;
