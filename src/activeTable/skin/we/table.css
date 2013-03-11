@@ -167,15 +167,6 @@
 	height: 100%;
 }
 
-.active-table.has-vscroll th,
-.active-table.has-hscroll th,
-.active-table.has-vscroll tfoot td
-.active-table.has-hscroll tfoot td {
-	display: block;
-	position: absolute;
-}
-
-
 .active-table.has-hscroll .dtable {
 	padding-bottom: 12px;
 }
@@ -288,21 +279,22 @@
 	position: absolute;
 }
 
-/*.active-table.has-hscroll .data-table thead,*/
-/*.active-table.has-vscroll .data-table thead {*/
-	/*white-space: nowrap;*/
-/*}*/
+.active-table.has-hscroll .data-table thead,
+.active-table.has-vscroll .data-table thead {
+	white-space: nowrap;
+}
 
-/*.active-table.has-hscroll .data-table th,*/
-/*.active-table.has-vscroll .data-table th{*/
-	/*display: inline-block;*/
-	/*white-space: normal;*/
-/*}*/
+.active-table.has-hscroll .data-table th,
+.active-table.has-vscroll .data-table th{
+	display: inline-block;
+	white-space: normal;
+}
 
-/*.active-table.has-hscroll .data-table tfoot td,*/
-/*.active-table.has-vscroll .data-table tfoot td{*/
-	/*display: inline-block;*/
-/*}*/
+.active-table.has-hscroll .data-table tfoot td,
+.active-table.has-vscroll .data-table tfoot td{
+	display: inline-block;
+	white-space: normal;
+}
 
 .active-table .hscroll {
 	position: absolute;

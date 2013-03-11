@@ -634,9 +634,10 @@
 
 			//resize table header and footer
 			if (this.scrollParams.autoSizing) {
+				var jqThead = this.el.find('.data-table > thead').hide();
 				var widths = [];
 				var jqThs = this.el.find('.data-table > thead:first tr:first > th');
-				jqThs.outerWidth(0);
+
 
 				this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
 					widths.push($(this).outerWidth());
@@ -646,7 +647,6 @@
 				var lastLeftPos = 0;
 				jqThs.each(function () {
 					$(this).outerWidth(widths[i]);
-					$(this).css({left: lastLeftPos});
 					lastLeftPos += widths[i];
 					i++;
 				});
@@ -657,14 +657,13 @@
 					i = 0;
 					jqFeet.each(function () {
 						$(this).outerWidth(widths[i]);
-						$(this).css({left: lastLeftPos});
 						lastLeftPos += widths[i];
 						i++;
 					});
 				}
+
+				jqThead.show();
 			}
-
-
 
 			if (this.scrollParams.horizontal) {
 				var jqHOverflow = this.el.find('.hscroll-overflow');
@@ -699,10 +698,10 @@
 				var jqHscrollLayer = this.el.find('.hscroll-layer');
 				this.el.find('.hscroll-overflow').css({height: 'auto'});
 				if (this.scrollParams.horizontal) this.el.find('.hscroll-overflow').height(jqHscrollLayer.height());
-				this.scrollParams.overflowWidth = this.el.find('.hscroll-overflow').width();
-				this.scrollParams.layerWidth = this.el.find('.hscroll-layer').outerWidth();
 			}
 
+			this.scrollParams.overflowWidth = this.el.find('.hscroll-overflow').width();
+			this.scrollParams.layerWidth = this.el.find('.hscroll-layer').outerWidth();
 			this.scrollParams.overflowHeight = jqVOverflow.height();
 			this.scrollParams.layerHeight = this.el.find('.vscroll-layer').height();
 
