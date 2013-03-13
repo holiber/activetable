@@ -387,6 +387,7 @@
 			this.selection = []; //array of indexes of selected elements
 			this._checkAll = false; //true when all elements are selected
 			this.on = null; //external event handlers
+			this.canSelectText = true; //use enableTextSelection() and disableTextSelection() to change this option
 			this.scrollParams = {
 				vertical: false,
 				horizontal: false,
@@ -1086,6 +1087,16 @@
 
 		},
 
+		enableTextSelection: function () {
+			this.canSelectText = true;
+			this.layout.removeClass('unselectable');
+		},
+
+		disableTextSelection: function () {
+			this.canSelectText = false;
+			this.layout.addClass('unselectable');
+		},
+
 		/**
 		 * render selection
 		 * @private
@@ -1175,13 +1186,17 @@
 
 			}.bind(this));
 
-			this.el.on('mousewheel.table', function (e, deltaY, deltaX) {
+			this.el.on('mousewheel.table', function (e, undefined, deltaX, deltaY) {
 				if (!this.scrollParams.vertical) return;
-				var acceleration = this.scrollParams.vAcceleration;
+				var vAcceleration = this.scrollParams.vAcceleration;
+				var hAcceleration = this.scrollParams.hAcceleration;
 				var scrollY = this.scrollParams.vPos;
-				deltaY = deltaY * acceleration;
+				var scrollX = this.scrollParams.hPos
+				deltaY = deltaY * vAcceleration;
+				deltaX = deltaX * hAcceleration;
 				deltaY = deltaY > 0 ? Math.ceil(deltaY) : Math.floor(deltaY);
-				this.scrollTo(scrollY - deltaY);
+				deltaX = deltaX > 0 ? Math.ceil(deltaX) : Math.floor(deltaX);
+				this.scrollTo(scrollY - deltaY, scrollX - deltaX);
 				e.preventDefault();
 			}.bind(this));
 
@@ -1189,17 +1204,20 @@
 				var jqScrollbar = $(e.currentTarget);
 				this.scrollParams.vBarOffsetY = e.offsetY || e.originalEvent.layerY;
 				this.scrollParams.isVscrolling = true;
+				this.disableTextSelection();
 			}.bind(this));
 
 			this.el.on('mousedown.table', '.hscroll .at-scrollbar', function (e) {
 				var jqScrollbar = $(e.currentTarget);
 				this.scrollParams.hBarOffsetX = e.offsetX || e.originalEvent.layerX;
 				this.scrollParams.isHscrolling = true;
+				this.disableTextSelection();
 			}.bind(this));
 
 			this.el.on('mouseup.table', function (e) {
 				this.scrollParams.isVscrolling = false;
 				this.scrollParams.isHscrolling = false;
+				this.enableTextSelection();
 			}.bind(this));
 
 			//sort
@@ -1740,6 +1758,7 @@
 			var table = p.table;
 			var classes = '';
 			classes = '.' + p.sTableName;
+			if (!table.canSelectText) classes += '.unselectable';
 			if (table.scrollParams.vertical) classes += '.has-vscroll';
 			if (table.scrollParams.horizontal) classes += '.has-hscroll';
 			return context.ActiveTable.Haml.toHtml(["%div." + classes,
