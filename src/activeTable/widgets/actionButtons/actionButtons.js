@@ -1,6 +1,6 @@
 (function (context) {
 
-	context.ActiveTable.installWidget('ActionButtons', {
+	context.ActiveTable.installWidget('actionButtons', {
 
 		/**
 		 * @param {Table} table
@@ -38,7 +38,7 @@
 			this._attachEvents();
 			this.isRendered = true;
 			this.enabled = true;
-			this.table.checkedCnt() ? this.el.show() : this.el.hide();
+			this.table.checkedCnt() ? this.el.addClass('active') : this.el.removeClass('active');
 			this.emit('render');
 		},
 
@@ -59,7 +59,7 @@
 			var self = this;
 			var namespace = '.' + this.name;
 			this.el.off(namespace);
-			this.el.on('click' + namespace, '.round-action-button', function (e) {
+			this.el.on('click' + namespace, '.button', function (e) {
 				self.action.call(self, $(e.currentTarget).attr('rel'));
 				e.preventDefault();
 			});

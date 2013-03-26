@@ -637,30 +637,41 @@
 			if (this.scrollParams.autoSizing) {
 				var jqThead = this.el.find('.data-table > thead').hide();
 				var widths = [];
-				var jqThs = this.el.find('.data-table > thead:first tr:first > th');
+				var jqThs = jqThead.find('tr:first > th');
+				if (!this.rowsCnt) {
+					jqThs.css({display: 'table-cell'});
+				} else {
+					jqThs.css({display: 'inline-block'});
+					this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
+						widths.push($(this).outerWidth());
+					});
 
-
-				this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
-					widths.push($(this).outerWidth());
-				});
-
-				var i = 0;
-				var lastLeftPos = 0;
-				jqThs.each(function () {
-					$(this).outerWidth(widths[i]);
-					lastLeftPos += widths[i];
-					i++;
-				});
-
-				lastLeftPos = 0;
-				if (this.hasFooter) {
-					var jqFeet = this.el.find('.data-table > tfoot:first tr:first > td');
-					i = 0;
-					jqFeet.each(function () {
+					var i = 0;
+					var lastLeftPos = 0;
+					jqThs.each(function () {
 						$(this).outerWidth(widths[i]);
 						lastLeftPos += widths[i];
 						i++;
 					});
+
+				}
+
+				lastLeftPos = 0;
+				if (this.hasFooter) {
+					var jqTfoot = this.el.find('.data-table > tfoot:first').hide();
+					var jqFeet = jqTfoot.find('tr:first > td');
+					if (!this.rowsCnt) {
+						jqFeet.css({display: 'table-cell'});
+					} else {
+						jqFeet.css({display: 'inline-block'});
+						i = 0;
+						jqFeet.each(function () {
+							$(this).outerWidth(widths[i]);
+							lastLeftPos += widths[i];
+							i++;
+						});
+					}
+					jqTfoot.show();
 				}
 
 				jqThead.show();
@@ -1681,6 +1692,7 @@
 			var odd = !!(from % 2);
 			if (table.data && to > table.rowsCnt) to = table.rowsCnt;
 			if (table.data && from > table.rowsCnt) from = 0;
+			if (!table.rowsCnt) rows += table.templates.emptyRow({tpl: {emptyRow: true}, table: table});
 
 			for (var i = from; i < to; i++) {
 				var row = data[i];
@@ -1761,8 +1773,10 @@
 			if (!table.canSelectText) classes += '.unselectable';
 			if (table.scrollParams.vertical) classes += '.has-vscroll';
 			if (table.scrollParams.horizontal) classes += '.has-hscroll';
+			if (table.locked) classes += '.locked';
 			return context.ActiveTable.Haml.toHtml(["%div." + classes,
 				['.table-wrap',
+					['.lock-overlay'],
 					['.widgets'],
 					['.dtable', p.ttable, p.vscroll, p.hscroll],
 					['.pager', p.pagination],
@@ -1883,6 +1897,10 @@
 
 		checkboxFoot: function (p) {
 			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox"]);
+		},
+
+		emptyRow: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%tr.empty-row.fake", ["%td", {colspan: p.table.visibleFields.length}]]);
 		},
 
 		pagination: function (p) {

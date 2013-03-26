@@ -13,6 +13,6 @@
 		return result;
 	};
 
-	ActiveTable.getWidget('ActionButtons').installTemplate(tpl);
+	ActiveTable.getWidget('actionButtons').installTemplate(tpl);
 
 })();
