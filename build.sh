@@ -1,6 +1,6 @@
 
 #Increment active table version here
-VERSION=0.3
+VERSION=0.4
 
 #drop dist directory
 rm -fr dist
