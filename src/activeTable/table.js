@@ -499,13 +499,15 @@
 			if (options.hasFooter) this.hasFooter = options.hasFooter;
 			if (options.templates) this.setTemplates(options.templates);
 			if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
-			if (options.order) this.order = options.order
-			if (options.fields || options.order || options.showOnlyDescribed || (!options.data && this.showOnlyDescribed)) {
+			if (options.order) this.order = options.order;
+			if (options.hiddenFields) this.hiddenFields = options.hiddenFields;
+			if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || (!options.data && this.showOnlyDescribed)) {
 				this.setFields(options.fields);
 			}
 			if (options.data || options.sort) {
 				this.data.sort(this.sort);
 			}
+			this.emit('setOptions')
 		},
 
 		setData: function (data) {
@@ -568,12 +570,19 @@
 		
 		/**
 		 * render table
+		 * @param {jQueryObject|String} [el] container or selector of area
 		 * WARNING! method does not guarantee that all widgets will be rendered
 		 * @see renderWidgets
 		 */
 		render: function (el) {
+			var selector = null;
+			if (typeof(el) == 'string') {
+				selector = el;
+				el = null;
+			}
+
 			if (el && el.length) this.el = el;
-			if (!this.el || !this.el.length) return;
+			if (!selector && (!this.el || !this.el.length)) return;
 
 			if (!this.templates.layout) {
 				throw('templates are not installed');
@@ -582,28 +591,38 @@
 
 			var firstTimeRendering = (el && el.length) || !(this.layout);
 
-			this.layout = $(this.templates.renderer(this));
-			
-			//widgets
-			if (firstTimeRendering || !this.enabled) {
-				this.renderWidgets();
-			} else {
-				this.layout.find('.widgets').append(this.jqWidgets);
-				for (var widgetName in this.widgets) {
-					var widget = this.widgets[widgetName];
-					if (widget.target) {
-						if (widget.el) this.layout.find(widget.target).replaceWith(widget.el);
-						else widget.render(this.layout.find(widget.target));
+			if (!selector) {
+				this.layout = $(this.templates.renderer(this));
+
+				//widgets
+				if (firstTimeRendering || !this.enabled) {
+					this.renderWidgets();
+				} else {
+					this.layout.find('.widgets').append(this.jqWidgets);
+					for (var widgetName in this.widgets) {
+						var widget = this.widgets[widgetName];
+						if (widget.target) {
+							if (widget.el) this.layout.find(widget.target).replaceWith(widget.el);
+							else widget.render(this.layout.find(widget.target));
+						}
 					}
 				}
+
+
+				if (firstTimeRendering || !this.enabled) {
+					this._attachEvents();
+					this.enabled = true;
+				}
+
+				this.el.html(this.layout);
+
+			} else {
+				var $part = $(this.templates.renderer(this)).find(selector);
+				this.layout.find(selector).replaceWith($part);
 			}
 
+
 			this._renderChecked();
-			this.el.html(this.layout);
-			if (firstTimeRendering || !this.enabled) {
-				this._attachEvents();
-				this.enabled = true;
-			}
 
 			if (this.scrollParams.vertical) {
 
@@ -625,7 +644,7 @@
 					jqColumn.width(field.width);
 				}
 			}
-			this.emit('render', this);
+			this.emit('render', selector);
 		},
 
 		/**
@@ -745,14 +764,30 @@
 			var selector = opt2 ? opt1 : null;
 			if (!this.data || !this.data.size()) return 0;
 			var cnt = 0;
-			for (var key in this.data.rows) {
-				var row = this.data.rows[key];
+			for (var i = 0; i < this.data.rows.length; i++) {
+				var row = this.data.rows[i];
 				if (!this.data.test(row, this.computedFilter)) continue;
 				if (selector && !this.data.test(row, selector)) continue;
 				fn(row);
 				cnt++;
 			}
 			return cnt;
+		},
+
+		/**
+		 * same as ActiveData.find, but only on filtered data
+		 * @param {Object|Function} expr
+		 * @return {Array} rows
+		 */
+		find: function (expr) {
+			var rows = [];
+			for (var i = 0; i < this.data.rows.length; i++) {
+				var row = this.data.rows[i];
+				if (!this.data.test(row, this.computedFilter)) continue;
+				if (!this.data.test(row, expr)) continue;
+				rows.push(row);
+			}
+			return rows;
 		},
 
 		/**
@@ -770,6 +805,7 @@
 			this.saveState();
 			this.render();
 			this.scrollTo(0);
+			this.emit('pageSwitch');
 			return true;
 		},
 
@@ -901,30 +937,51 @@
 
 		/**
 		 * check or uncheck filtered rows
+		 * checkAll([expr], state)
+		 * @param {Object|Function} [expr]
 		 * @param {Boolean} [state=true]
 		 */
-		checkAll: function (state) {
+		checkAll: function (expr, state) {
 			var self = this;
+			if (!expr || typeof(expr) == 'boolean') {
+				state = expr;
+				expr = null;
+			}
 			if (state === undefined) state = true;
 			if (!this.selectable) return;
-			this._checkAll = state;
-			this.selection = [];
+			this._checkAll = !expr && state;
 			var jqCheckbox = this.layout.find('th.col-checkbox .checkbox');
-			if (state) {
-				this.forEach(function (row) {
-					self.selection.push(row.idx);
-				});
-				jqCheckbox.removeClass('checked');
-				jqCheckbox.addClass('checked-all');
-				for (var key in this.data.rows) {
-					var row = this.data.rows[key];
-					if (this.data.test(row, this.computedFilter)) this.selection.push(row.idx);
-				}
+			if (expr) {
+				this.forEach(expr, function (row) {
+					var pos = $.inArray(row.idx, this.selection);
+					if (!state && !~pos) return;
+					if (!state && ~pos) {
+						this.selection.splice(pos, 1);
+						return;
+					}
+					this.selection.push(row.idx);
+				}.bind(this));
+
 			} else {
 				this.selection = [];
-				jqCheckbox.removeClass('checked-all');
-				jqCheckbox.removeClass('checked');
+				if (state) {
+					jqCheckbox.removeClass('checked');
+					this.forEach(function (row) {
+						self.selection.push(row.idx);
+					});
+					jqCheckbox.addClass('checked-all');
+
+//				for (var key in this.data.rows) {
+//					var row = this.data.rows[key];
+//					if (this.data.test(row, this.computedFilter)) this.selection.push(row.idx);
+//				}
+				} else {
+					this.selection = [];
+					jqCheckbox.removeClass('checked-all');
+					jqCheckbox.removeClass('checked');
+				}
 			}
+
 			this.emit('selectionChange');
 			this._renderChecked();
 		},
@@ -1197,7 +1254,7 @@
 
 			}.bind(this));
 
-			this.el.on('mousewheel.table', function (e, undefined, deltaX, deltaY) {
+			this.el.on('mousewheel.table', '.dtable', function (e, undefined, deltaX, deltaY) {
 				if (!this.scrollParams.vertical) return;
 				var vAcceleration = this.scrollParams.vAcceleration;
 				var hAcceleration = this.scrollParams.hAcceleration;
@@ -1463,6 +1520,44 @@
 				});
 			});
 
+
+			//UI
+
+			//checkbox
+			this.el.on('mousedown.table', '.at-checkbox', function (e) {
+				var $target = $(e.currentTarget);
+				var $input = $target.find('input');
+				if ($target.hasClass('checked')) {
+					$target.removeClass('checked');
+					$input.val(0);
+				} else {
+					$target.addClass('checked');
+					$input.val(1);
+				}
+				$input.change();
+			});
+
+
+			//dropdown
+			this.el.on('click.table', '.at-dropdown-button', function (e) {
+				var $dropdown = $(e.currentTarget).closest('.at-dropdown');
+				var id = 'at-dropdown-' + $.now();
+				if ($dropdown.hasClass('open')) return;
+				$dropdown.addClass('open').attr('id', id);
+				$dropdown.trigger('dropdownOpen');
+				setTimeout(function () {
+					$('body').on('click.' + id, function (e) {
+						var $target = $(e.target);
+						if (!$target.hasClass('.at-dropdown-button') && !$target.closest('.at-dropdown-button').length) {
+							if ($target.attr('id') == id || $target.closest('#' + id).length) return;
+						}
+						$('body').off(e);
+						$dropdown.removeClass('open');
+						$dropdown.trigger('dropdownClose');
+					});
+				});
+			});
+
 			this.emit('attachEvents', this);
 			return true;
 		},
@@ -1527,7 +1622,7 @@
 				widget.name ? this.addFilter(widget.name, expr) : this.addFilter(expr);
 			}
 			if (this.selection.length) this.recheck();
-			this.render();
+			this.render('.data-table');
 		},
 
 		_onPerPageHandler: function (e) {

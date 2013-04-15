@@ -267,7 +267,7 @@
 				return;
 			}
 
-			var fields = opt;
+			var fields = $.isArray(opt) ? opt : [opt];
 			var self = this;
 
 			this.sortFields = fields || this.sortFields || [{fieldName: 'idx', order: 'asc'}];

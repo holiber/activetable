@@ -157,7 +157,7 @@
 
 /* widgets*/
 .widgets {position: relative;}
-.widget {display: inline-block; vertical-align: top}
+.widget {display: inline-block; vertical-align: top; height: 39px}
 
 /* pager */
 
@@ -192,6 +192,8 @@
 	background: -o-linear-gradient(#F6F6F6, #E7E7E7 100%);
 	background: linear-gradient(#F6F6F6, #E7E7E7 100%);
 }
+
+.pagination {display: none} /* use pageSwitcher for this skin*/
 .pagination a, .pagination i {padding:0 8px;text-decoration:none;color:#777;font-size:14px;float:left;display:block}
 .pagination a:hover	{color:#333}
 .pagination a.button	{padding:0;line-height:24px;position:absolute;width:33px;left:0;top:0;margin:-1px 0 0 -1px}
@@ -389,3 +391,95 @@
 	outline: 1px solid #bdbdbd;
 	cursor: default;
 }
+
+/* ui */
+.at-icon {
+	font-size: 1px;
+	line-height: 1px;
+	background: transparent none center center no-repeat;
+	background-image: url("icons.png");
+	width: 15px;
+	height: 15px;
+	display: inline-block;
+	vertical-align: top;
+	margin-top: -2px;
+}
+
+.at-icon.at-view {background-position: -331px 0;}
+.at-icon.at-left {background-position: -295px 0;}
+.at-icon.at-right {background-position: -310px 0;}
+.at-icon.at-down {background-position: -32px 0px;}
+
+
+.at-button {
+	font-size: 11px;
+	text-decoration: none;
+	padding: 6px 10px;
+	line-height: 15px;
+	background: #f6f6f6;
+	text-align: center;
+	position: relative;
+	border: 1px solid #cacaca;
+	cursor: pointer;
+	height: 29px;
+	display: inline-block;
+	text-align: center;
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+}
+
+.at-button:hover {
+	text-decoration: none;
+	background: -webkit-gradient(linear, 0 0, 0 100%, from(#fff), to(#f6f6f6));
+	background: -webkit-linear-gradient(#fff, #f6f6f6 100%);
+	background: -moz-linear-gradient(#fff, #f6f6f6 100%);
+	background: -ms-linear-gradient(#fff, #f6f6f6 100%);
+	background: -o-linear-gradient(#fff, #f6f6f6 100%);
+	background: linear-gradient(#fff, #f6f6f6 100%);
+	background-color: #f6f6f6;
+	-webkit-box-shadow: #E8E8E8 0 1px 1px;
+	-moz-box-shadow: #E8E8E8 0 1px 1px;
+	box-shadow: #E8E8E8 0 1px 1px;
+}
+
+.at-checkbox {
+	display: inline-block;
+	padding: 2px 5px 7px 20px;
+	line-height: 14px;
+	cursor: pointer;
+	position: relative;
+	margin-top: -1px;
+	min-height: 10px;
+	min-width: 10px;
+}
+
+.at-checkbox input {display: none}
+
+.at-checkbox span {
+	background: url("icons.png") -133px 0 no-repeat;
+	width: 15px;
+	height: 15px;
+	position: absolute;
+	top: 3px;
+	left: 0;
+	margin-top: -1px;
+}
+
+.at-checkbox.checked span {background-position: -86px 0}
+
+.at-dropdown {position: relative}
+
+.at-dropdown-content {
+	display: none;
+	padding: 10px;
+	background-color: #ffffff;
+	border: 1px solid #cacaca;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 10;
+	box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+.at-dropdown.open .at-dropdown-content {display: block}
