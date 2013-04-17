@@ -26,6 +26,7 @@
 		widgets: {},
 		widgetsOrder: [],
 		helper: {},
+		resizeThrottle: 500,
 		fieldsDefaults: {
 			sortable: true,
 			editable: false,
@@ -410,6 +411,8 @@
 			this.clientX = null;
 			this.clientY = null;
 			this.lastCheckedIdx = null;
+			this.resizeThrottle = 0;
+			this.resizeTimeoutId = null;
 			this._setOptions(options);
 		},
 
@@ -432,6 +435,7 @@
 			this.hasFooter = this.params.hasFooter;
 			this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
 			this.showOnlyDescribed = this.params.showOnlyDescribed;
+			this.resizeThrottle = this.params.resizeThrottle;
 			this.el = this.params.el;
 			this.scrollParams = $.extend({}, DEFAULT_OPTIONS.scrollParams, this.params.scrollParams);
 
@@ -649,8 +653,28 @@
 
 		/**
 		 *  resize table in scroll mode
+		 *  @param {Boolean} [throttle=false]
 		 */
-		resize: function () {
+		resize: function (throttle) {
+
+			throttle = typeof(throttle) == 'boolean' || false;
+
+
+			if (throttle && this.resizeTimeoutId) {
+				this.el.parent().css({overflow: 'hidden'});
+				this.layout.width(this.layout.width());
+				clearTimeout(this.resizeTimeoutId);
+				this.resizeTimeoutId = setTimeout(this.resize.bind(this), this.resizeThrottle);
+				return;
+			}
+
+			if (throttle) {
+				this.resizeTimeoutId = -1;
+			} else {
+				this.resizeTimeoutId = null;
+				this.layout.css({width: 'auto'});
+				this.el.parent().css({overflow: 'visible'});
+			}
 
 			//resize table header and footer
 			if (this.scrollParams.autoSizing) {
