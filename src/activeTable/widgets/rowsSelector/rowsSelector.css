@@ -1,0 +1,34 @@
+.widget.rows-selector {position: absolute; z-index: 5}
+.widget.rows-selector .at-dropdown-button {
+	height: 17px;
+	position: relative;
+	padding: 6px 0 5px 5px;
+	border: 1px solid #d0d0d0;
+	margin: 6px 0 0 6px;
+}
+
+.widget.rows-selector .open .at-dropdown-button {
+	background-color: #ffffff;
+	border-bottom: none;
+	z-index: 20;
+}
+
+.widget.rows-selector .at-down {
+	position: absolute;
+	right: 0px;
+	width: 13px;
+	top: 8px;
+	background-position: -33px 0px;
+}
+
+.widget.rows-selector .at-dropdown-content {
+	margin-top: -1px;
+	margin-left: 6px;
+	padding-left: 5px !important;
+}
+
+.widget.rows-selector .nothing{display: block; padding-left: 20px}
+
+.widget.rows-selector .nothing:after {
+	content: 'Nothing';
+}

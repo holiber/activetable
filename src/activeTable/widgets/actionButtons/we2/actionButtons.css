@@ -1,0 +1,6 @@
+.widget.action-buttons {display: inline-block; vertical-align: top}
+.widget.action-buttons .button {opacity: 0.3}
+.widget.action-buttons.active .button {opacity: 1}
+.widget.action-buttons .clear-selection {float:right;}
+.widget.action-buttons .right {float: right;}
+.widget.action-buttons .left {float: left;}

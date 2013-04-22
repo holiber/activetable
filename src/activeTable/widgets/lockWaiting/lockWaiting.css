@@ -1,0 +1,5 @@
+.lock-waiting.widget .waiting-icon{
+	height: 30px;
+	width: 30px;
+	background: url(loading.gif) no-repeat;
+}
