@@ -1,4 +1,4 @@
-ActiveTables by A.Nazarov
+ActiveTables by Holbe
 =========================
 
 run build.sh script to pack scripts
