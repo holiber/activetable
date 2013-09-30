@@ -1,4 +1,4 @@
-ActiveTables by Holbe
+ActiveTables by Holiber
 =========================
 
 run build.sh script to pack scripts
