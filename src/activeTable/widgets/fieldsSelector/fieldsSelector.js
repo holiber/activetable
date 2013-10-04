@@ -84,7 +84,7 @@
 		}
 
 		return '<div>' +
-			'<a href="#" class="at-button dropdown-button"><div class="at-icon at-view"></div></a>' +
+			'<a href="#" class="at-button dropdown-button"><div class="at-icon at-view"></div><div class="at-icon at-down"></div></a>' +
 			'<div class="dropdown-content">' +
 				fieldsDropdownContent +
 			'</div>' +

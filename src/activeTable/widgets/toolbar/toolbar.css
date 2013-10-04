@@ -1,0 +1,13 @@
+.active-table .at-button.with-selection,
+.active-table .btn.with-selection,
+.active-table .button.with-selection {
+	opacity: 0.3
+}
+
+.active-table.has-selected .at-button.with-selection,
+.active-table.has-selected .btn.with-selection,
+.active-table.has-selected .button.with-selection {
+	opacity: 1
+}
+
+.widget.toolbar .button-group {margin-right: 10px}

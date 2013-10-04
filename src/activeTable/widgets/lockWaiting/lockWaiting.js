@@ -9,7 +9,7 @@
 		render: function ($el) {
 			if ($el) this.el = $el;
 			var jqLayout = $(this.tpl(this));
-			this.el.html(jqLayout);
+			if (this.el) this.el.html(jqLayout);
 
 		},
 

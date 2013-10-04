@@ -1,16 +1,21 @@
 !function (ActiveTable) {
 
 	var MOUSEOUT_TIMEOUT = 1000;
+	var DEFAULT_PARAMS = {
+		alwaysShow: false
+	}
 
 	ActiveTable.installWidget('pageSwitcher', {
 
-		init: function (table) {
+		init: function (table, params) {
+			this.params = $.extend({}, DEFAULT_PARAMS, params);
 			this._super(table);
 			this.mouseOutTimeoutId = null;
 		},
 
 		render: function ($el) {
 			if ($el) this.el = $el;
+			if (!this.el) return false;
 			var $layout = $(this.tpl(this));
 			this.el.html($layout);
 			this._attachEvents();
@@ -38,6 +43,7 @@
 
 		_onDropdownClick: function (e) {
 			e.preventDefault();
+			if (this.el.find('.one-page').length) return
 			this.el.find('.pages-dropdown').toggle();
 		},
 
@@ -68,12 +74,14 @@
 		for (var i = 1; i <=  pagesCnt ; i++) {
 			pagesDropdown += '<a href="#" class="' + (page == i ? 'current-page' : '') + '" rel="' + i + '">' + i + '</a>';
 		}
-		var canPrev = page == 1 ? 'pages-disabled' : '';
-		var canNext = page == pagesCnt ? 'pages-disabled': '';
+		var canPrev = page == 1 ? ' pages-disabled' : '';
+		var canNext = page == pagesCnt ? ' pages-disabled': '';
+		var hasOnePage = pagesCnt <= 1 ? ' one-page' : '';
+		var hidden = (!widget.params.alwaysShow && hasOnePage) ? ' hide-switcher' : '';
 
-		return '<div>' +
+		return '<div class="' + hasOnePage + hidden + '">' +
 			'<a class="at-button pages-prev ' + canPrev + '" rel="prev" href="#"><div class="at-icon at-left"></div></a>' +
-			'<a class="at-button pages-dropdown-btn">' + widget.table.page + '<div class="at-icon at-down"></div></a>' +
+			'<a class="at-button pages-dropdown-btn"><span>' + widget.table.page + '</span><div class="at-icon at-down"></div></a>' +
 			'<a class="at-button pages-next ' + canNext + '" rel="next" href="#"><div class="at-icon at-right"></div></a>' +
 			'<div class="pages-dropdown">' + pagesDropdown + '</div>' +
 		'</div>';

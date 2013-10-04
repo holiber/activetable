@@ -1,4 +1,4 @@
-(function(context){
+;(function(context){
 	var tpl = {};
 	tpl.layout = function (widget) {
 		return context.ActiveTable.Haml.toHtml(["%div",

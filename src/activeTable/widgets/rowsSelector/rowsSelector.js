@@ -1,14 +1,26 @@
-!function (ActiveTable) {
+;!function (ActiveTable) {
+
+	var DEFAULT_PARAMS = {
+		mode: 'checkbox', // "checkbox" or "radio"
+		selectors: []
+	}
+
+	var DEFAULT_SELECTOR_PARAMS = {
+		expr: {},
+		isChecked: false,
+		title: ''
+	}
 
 	ActiveTable.installWidget('rowsSelector', {
 
-		init: function (table, selectors) {
+		init: function (table, params) {
+			params = $.extend({}, DEFAULT_PARAMS, params);
 			this._super(table);
-			this.selectors = selectors;
+			this.mode = params.mode;
+			this.selectors = params.selectors;
 			this.isChecked = false;
 			for (var i = 0; i < this.selectors.length; i++) {
-				this.selectors[i].id = i;
-				this.selectors[i].isChecked = false;
+				this.selectors[i] = $.extend({}, DEFAULT_SELECTOR_PARAMS, {id: i} , this.selectors[i]);
 			}
 		},
 
@@ -16,6 +28,7 @@
 			if ($el) this.el = $el;
 
 			this.isChecked = this.table._checkAll;
+			this.hasChecked = this.isChecked || !!this.table.selection.length;
 
 			for (var i = 0; i < this.selectors.length; i++) {
 				var selector = this.selectors[i];
@@ -42,7 +55,7 @@
 			this.el.offset({top: colCheckboxOffset.top, left: colCheckboxOffset.left});
 			this.el.outerWidth($colCheckbox.outerWidth());
 			this.el.outerHeight($colCheckbox.outerHeight());
-			$colCheckbox.find('> *').hide();
+			$colCheckbox.find('.column-wrap > *').hide();
 			this._attachEvents();
 		},
 
@@ -70,19 +83,21 @@
 			}
 		},
 
+
 		_onCheckboxChange: function (e) {
 			var $checkbox = $(e.currentTarget).closest('.at-checkbox');
 			var id = $checkbox.attr('rel');
 			var isChecked = $checkbox.hasClass('checked');
-			if (id == 'all') {
+
+			if(id == 'all'){
 				this.table.checkAll(isChecked);
-				return;
 			} else {
-				var selector = this.selectors[id];
-				this.table.checkAll(selector.expr, isChecked);
+				if (this.mode === 'radio')
+					this.table.checkAll(this.selectors[id].expr, isChecked);
+				else
+					this.table.check(this.selectors[id].expr, isChecked);
 			}
 		}
-
 	});
 
 
@@ -94,7 +109,7 @@
 			selectors += '<label class="at-checkbox ' + checked + '" rel="' + i + '"><span></span><input/>' + selector.title + '</label>'
 		}
 
-		var checked = this.isChecked ? 'checked' : '';
+		var checked = this.isChecked ? 'checked checked-all' : this.hasChecked? 'checked' : '';
 
 		return '<div class="at-dropdown">' +
 			'<div class="at-dropdown-button">' +

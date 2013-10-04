@@ -1,4 +1,4 @@
-(function (context) {
+;(function (context) {
 
 	/* Simple JavaScript Inheritance
 	 * By John Resig http://ejohn.org/
@@ -77,7 +77,7 @@
 			this.changes = {};
 			this.sortFields = null;
 			this.reduce = $.extend({}, reduce);
-			var unpacked = this.unpack(this.reduce);
+			var unpacked = this.unpack(reduce);
 			this.rows = unpacked.rows;
 			this.columns = unpacked.columns;
 			this.lastIdx = unpacked.lastIdx;
@@ -98,11 +98,29 @@
 		/**
 		 * unpack reduce data
 		 * @param reduce
-		 * @return {JSON} unpacked object like {rows: {*}, columns: {*}, lastIdx: * }
+		 * @return {Object} unpacked object like {rows: {*}, columns: {*}, lastIdx: * }
 		 */
 		unpack: function (reduce) {
 			var empty = {columns: ['idx'], rows: [], lastIdx: 1};
 			if (!reduce) return empty;
+
+			if ($.isArray(reduce)) {
+				if (!reduce.length) return empty;
+				var firstRow = reduce[0];
+				var columns = ['idx'];
+				var idx = 1;
+				var rows = [];
+				for (var fieldName in firstRow) {
+					columns.push(fieldName);
+				}
+				for (var rowKey = 0; rowKey < reduce.length; rowKey++) {
+					var row = $.extend({idx: idx}, reduce[rowKey]);
+					rows.push(row);
+					idx++
+				}
+				return {rows: rows, columns: columns, lastIdx: idx};
+			}
+
 			if (!reduce.columns) return empty;
 			var columns = ['idx'].concat(reduce.columns);
 			var idx = 1;
@@ -183,10 +201,45 @@
 			return result;
 		},
 
+		findOne: function (opt1, opt2) {
+			if (arguments.length == 1) {
+				var data = this.rows;
+				var expr = opt1;
+			}
+
+			if (arguments.length == 2) {
+				if ($.isArray(opt2)) {
+					var fieldsToAdd = opt2;
+					var data = this.rows;
+					var expr = opt1;
+				} else {
+					var data = opt1;
+					var expr = opt2;
+				}
+			}
+
+			var result = [];
+			for (var key = 0; key < data.length; key++) {
+				var row = data[key];
+				if (expr !== true && !this.test(row, expr)) continue;
+				if (fieldsToAdd) {
+					var filteredRow = {};
+					for (var i = fieldsToAdd.length; i--;) {
+						filteredRow[fieldsToAdd[i]] = row[fieldsToAdd[i]];
+					}
+					result.push(filteredRow);
+					continue;
+				}
+				result.push(row);
+				break;
+			}
+			return result[0];
+		},
+
 		/**
 		 * checks for compliance with an item of expression
 		 * @param item
-		 * @param {JSON} expr
+		 * @param {Function|JSON} expr
 		 * @param {String} [flag='$eq']
 		 * @return {Boolean}
 		 * @example
@@ -195,7 +248,7 @@
 		 */
 		test: function (item, expr, flag) {
 
-			if (typeof(expr) == 'string' || typeof(expr) == 'number') {
+			if (typeof(expr) != 'object' && typeof(expr) != 'function') {
 				flag = flag || '$eq';
 				switch (flag) {
 					case '$eq': return item == expr;
@@ -204,7 +257,7 @@
 					case '$lt': return item < expr;
 					case '$gte': return item >= expr;
 					case '$lte': return item <= expr;
-					case '$like': return item !== null ? ~item.toLowerCase().indexOf(expr) : false;
+					case '$like': return item !== null ? ~String(item).toLowerCase().indexOf(expr) : false;
 					default: return false;
 				}
 			}
@@ -216,8 +269,12 @@
 				return true;
 			}
 
+			if (typeof(expr) == 'function') {
+				return expr(item);
+			}
 
 			if (expr instanceof Array) {
+				//if (!expr.length) return true;
 				for (var key = 0; key < expr.length; key++) {
 					if (this.test(item, expr[key])) return true;
 				}
@@ -244,7 +301,28 @@
 
 			return false;
 		},
-		
+
+		/**
+		 *
+		 * @param [expr]
+		 * @param key
+		 * @returns {Array}
+		 */
+		getList: function (expr, key) {
+			if (typeof(expr) == 'string') {
+				key = expr;
+				expr = null;
+			}
+			var list = [];
+			var rows = expr ? this.find(expr) : this.rows;
+			for (var i = 0; i < rows.length; i++) {
+				var value = rows[i][key];
+				if (~$.inArray(value, list)) continue;
+				list.push(value);
+			}
+			return list;
+		},
+
 		/**
 			fire event
 			@eventName {Sting}
@@ -262,6 +340,9 @@
 		 * @example data.sort([{fieldName: 'amount', order: 'desc', zeroIsLast: true}])
 		 */
 		sort: function (opt, zeroIsLast) {
+
+			if (!opt) return false;
+
 			if ($.isFunction(opt)) {
 				this.rows.sort(opt);
 				return;
@@ -355,10 +436,11 @@
 					if (!rowValues) continue;
 					cnt++;
 					var lastChange = (this.changes[row.idx]) || {};
-					var change =  {action: 'update', source: lastChange.source || $.extend({}, row), values: $.extend({}, lastChange.values || {}, rowValues)};
+					var change =  {action: 'update', source: lastChange.source || $.extend({}, row), values: $.extend({}, lastChange.values || {}, rowValues), current: null};
 					for (var fieldName in rowValues) {
 						row[fieldName] = rowValues[fieldName];
 					}
+					change.current = row;
 					if (!soft) {
 						operationChanges.push(change);
 						this.changes[row.idx] = change;
@@ -371,12 +453,36 @@
 		},
 
 		/**
+		 * patch rows
+		 * @param items
+		 * @param {String} [key='idx']
+		 * @param {Boolean} [soft=false]
+		 * @return {Number} patchedCount
+		 */
+		patch: function (items, key, soft) {
+			key = key || 'idx';
+			soft = soft || false;
+			if (!items) return 0;
+			var patchMap = {};
+			for (var i = 0; i < items.length; i++) {
+				patchMap[items[i][key]] = items[i]
+			};
+			this.update(function (row) {
+				if (!patchMap[row[key]]) return false;
+				var patch = $.extend({}, patchMap[row[key]]);
+				delete patch[key];
+				return patch;
+			}, soft);
+		},
+
+		/**
 		 * add row to data
 		 * @param {Array|Object} rows
 		 */
 		add: function (rows, soft) {
 			//TODO: сompute only added fields
 			rows = $.isArray(rows) ? rows : [rows];
+			rowsToAdd = [];
 			for (var key = 0; key < rows.length; key++) {
 				var row = rows[key];
 				for (var fieldName in row) {
@@ -388,8 +494,9 @@
 				row.idx = ++this.lastIdx;
 				var change = {action: 'add', values: row};
 				if (!soft) this.changes[row.idx] = change;
-				this.rows.push(row);
+				rowsToAdd.push(row);
 			}
+			this.rows = rowsToAdd.concat(this.rows);
 			this.compute();
 			this.sortFields = null;
 			this.fire('change', change);
@@ -483,7 +590,8 @@
 				if (field.defaultValue != undefined) this.defaults[field.name] = field.defaultValue;
 			}
 			this.compute();
-			this.fire('fieldsChange', {action: 'add', fields: fields});
+			//this.fire('fieldsChange', {action: 'add', fields: fields});
+			this.fire('change', {action: 'addFields', fields: fields});
 			return true;
 		},
 
@@ -505,6 +613,26 @@
 		},
 
 		/**
+		 * getCopy ([expr])
+		 * @param {Object|Function} [expr]
+		 * @returns {ActiveData}
+		 */
+		getCopy: function (expr) {
+			var rows = this.rows;
+			if (expr) rows = this.find(expr);
+			var copyData = new context.ActiveData(JSON.parse(JSON.stringify({columns: this.columns, rows: []})));
+			copyData.rows = JSON.parse(JSON.stringify(rows));
+			copyData.lastIdx = this.lastIdx;
+			return copyData;
+		},
+
+		getKeys: function (obj) {
+			var result = [];
+			for (var key in obj) result.push(key);
+			return result;
+		},
+
+		/**
 		 * @return {Number}
 		 */
 		changesCnt: function () {
@@ -519,7 +647,7 @@
 					delete this.rows[key][fieldName];
 				}
 			}
-			this.fire('fieldsChange', {action: 'add', fields: [fieldName]});
+			this.fire('fieldsChange', {action: 'removeField', fields: [fieldName]});
 		}
 	});
 	

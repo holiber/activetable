@@ -1,0 +1,23 @@
+.widget.search{
+	position: relative;
+	margin-right: 10px;
+}
+
+.widget.search input{
+	padding-left: 30px;
+}
+
+.widget.search input:focus~label{
+	opacity: 1;
+}
+
+.widget.search label {
+	background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAALRJREFUeNpi/P//P0NYWJg0AwNDLxDbMEDAESAuXrVq1VMon4ExNDRUHUgfA2IhBlTwDohtgYqvgThMQNwCVXQQiM2h+CBUrAWmiwWIXaHsCKDuFyAG0CkRQOo5khzYRBhgxsL+hWziPiAOBOI5QJMSoeJzoPRuZBNroA73gFr3HMoGAQNoiDAwIgXPBGjwfAfiTUDsBMS6QHwHiB3ACrEBoGZRILUXqvgmToVIiteB2AABBgCCMjVg6LJM8wAAAABJRU5ErkJggg==") no-repeat 12px center;
+	top: 0px;
+	bottom: 0px;
+	cursor: pointer;
+	width: 30px;
+	height: 30px;
+	position: absolute;
+	opacity: 0.3;
+}

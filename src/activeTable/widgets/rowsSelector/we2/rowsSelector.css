@@ -1,0 +1,93 @@
+.widget.rows-selector {position: absolute; z-index: 5}
+.widget.rows-selector .at-dropdown-button {
+	position: relative;
+	border: none;
+	border-right: 1px solid #cacaca;
+	height: 19px;
+	width: 20px;
+	top: 1px;
+	padding: 12px 16px 9px 15px;
+	margin: 0;
+}
+
+.widget.rows-selector .open .at-dropdown-button {
+	background-color: #eeeeee;
+	border-bottom: none;
+	z-index: 20;
+}
+
+.widget.rows-selector .at-down {
+	position: absolute;
+	background-position: -33px 0px;
+	right: 9px;
+	width: 18px;
+	top: 15px;
+}
+
+
+.widget.rows-selector .at-dropdown-button .at-checkbox.checked.checked-all span:after{background-position: -178px 0px;}
+.widget.rows-selector .at-dropdown-button .at-checkbox.checked span:after{background-position: -155px 0px;}
+
+.widget.rows-selector div.at-down.at-icon{
+	background-position: 0px 0px;
+}
+
+.widget.rows-selector .at-dropdown-content {
+	margin-top: -1px;
+	margin-left: 6px;
+	position: absolute;
+	top: 105%;
+	left: -7px;
+	z-index: 10;
+	box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+	padding: 0 0 5px 0px !important;
+}
+
+.widget.rows-selector .nothing{display: block; padding-left: 20px}
+
+.widget.rows-selector .at-dropdown-content .at-checkbox span,
+.widget.rows-selector .at-dropdown-content .at-checkbox.checked span,
+.widget.rows-selector .at-dropdown-content .at-checkbox.checked span:after{
+	border: none;
+	background: none;
+}
+
+.widget.rows-selector .at-dropdown-button .at-checkbox{
+	padding: 2px 5px 4px 0px;
+	right: 4px;
+}
+
+.widget.rows-selector .nothing:after {
+	content: 'Nothing';
+}
+
+.widget.rows-selector .at-dropdown-content > label.at-checkbox{
+	padding: 5px 20px 5px 15px;
+	display: block;
+}
+
+.widget.rows-selector .at-dropdown-content > a+label.at-checkbox{
+	margin-top: 5px;
+}
+
+.widget.rows-selector .at-dropdown-content:last-child{
+	margin-bottom: 5px;
+}
+
+
+.widget.rows-selector .at-dropdown-content .at-checkbox span,
+.widget.rows-selector .at-dropdown-content .at-checkbox.checked span,
+.widget.rows-selector .at-dropdown-content .at-checkbox.checked span:after{
+	border: none;
+	background: none;
+}
+
+.widget.rows-selector .at-dropdown-content > label.at-checkbox:hover{
+	background-color: #eee;
+}
+
+.widget.rows-selector .at-dropdown-content .at-checkbox:hover span {box-shadow: none;}
+
+.widget.rows-selector .at-dropdown-content>a{
+	display: none;
+}

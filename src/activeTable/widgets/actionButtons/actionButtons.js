@@ -1,4 +1,4 @@
-(function (context) {
+;(function (context) {
 
 	context.ActiveTable.installWidget('actionButtons', {
 
@@ -21,7 +21,8 @@
 					name: 'unnamedButton',
 					title: null,
 					content: 'unnamedButton',
-					action: null
+					action: null,
+					alwaysActive: false
 				};
 				var button = $.extend({}, defaultButton, this.buttons[i]);
 				if (button.title === null) button.title = button.content;

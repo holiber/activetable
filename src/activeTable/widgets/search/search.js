@@ -86,7 +86,8 @@
 	});
 
 	context.ActiveTable.getWidget('search').installTemplate(function (widget) {
-		return '<input type="text" class="search-text" placeholder="' + widget.params.placeholder + '" value="' + widget.val + '"/>';
+		return '<input id=widget-search-"' + widget.table.name + '" type="text" class="search-text" placeholder="' + widget.params.placeholder + '" value="' + widget.val + '"/>' +
+			'<label for=widget-search-"' + widget.table.name + '"></label>';
 	})
 
 }(window)

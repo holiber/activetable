@@ -1,4 +1,4 @@
-(function () {
+;(function () {
 
 	var tpl = {};
 
@@ -9,7 +9,7 @@
 			result.push(["%a.round-action-button.act-" + ActiveTable.utils.toScore(button.name) , {"href": "#", rel: button.name, title: button.title}, ["%ins.ib"], button.content]);
 		}
 		result.push([".right"],["%dfn"]);
-		result = Haml.toHtml(result);
+		result = ActiveTable.Haml.toHtml(result);
 		return result;
 	};
 

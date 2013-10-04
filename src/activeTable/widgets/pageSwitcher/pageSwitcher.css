@@ -1,5 +1,6 @@
 .widget.page-switcher {float: right;position: relative}
 .widget.page-switcher .pages-dropdown {display: none}
+.widget.page-switcher .hide-switcher {display: none}
 .widget.page-switcher .pages-btn {
 	font-size: 11px;
 	text-decoration: none;
@@ -31,23 +32,38 @@
 	border-radius: 3px 0 0 3px;
 }
 
-.widget.page-switcher a.pages-disabled > *{
+.widget.page-switcher a.pages-disabled > *
+{
 	cursor: default;
 	color: #cacaca;
 	opacity: 0.3;
 }
 
+.widget.page-switcher .one-page .at-down{
+	display: none;
+}
+
 .widget.page-switcher .pages-dropdown-btn {
 	border-right: none;
 	border-left: none;
+	color: black;
+	font-weight: bold;
+	padding: 6px 6px 6px 0;
 }
+.widget.page-switcher .pages-dropdown-btn span{
+	margin: 0 5px 0 10px;
+}
+
 .widget.page-switcher .pages-dropdown {
+
+	left: 50%;
+	margin-left: -26px;
+	width: 49px;
 	background-color: #ffffff;
 	border: 1px solid #cacaca;
 	position: absolute;
 	top: 100%;
-	left: 0;
-	width: 80px;
+	margin-top: -5px;
 	z-index: 10;
 	max-height: 300px;
 	overflow-y: scroll;

@@ -1,4 +1,4 @@
-(function (context) {
+;(function (context) {
 
 	var ARROWS_BS_DEL = [37,39,8,46],
 		DIGIT_BOUNDS = [48,57];
@@ -38,9 +38,9 @@
 			defaultValue: undefined,
 			validation: undefined,
 			maxValue: undefined,
-			minValue: undefined
-			//title: function (field) { return field.name}
-			//display: function (tplParams) {}
+			minValue: undefined,
+			title: undefined, //function (field) { return field.name}
+			display: undefined//display: function (tplParams) {}
 		},
 		on: {}
 	};
@@ -137,7 +137,7 @@
 		};
 
 		function elem( elem, builder ){
-			if( !elem ){
+			if(elem === undefined || elem == null){
 				builder.append('');
 			} else if( elem.constructor === String || elem.constructor === Number ){
 				builder.append( elem );
@@ -389,6 +389,7 @@
 			this._checkAll = false; //true when all elements are selected
 			this.on = null; //external event handlers
 			this.canSelectText = true; //use enableTextSelection() and disableTextSelection() to change this option
+			this.cssClasses = [] //contains custom css-classes for table
 			this.scrollParams = {
 				vertical: false,
 				horizontal: false,
@@ -404,7 +405,9 @@
 				isVscrolling: false,
 				isHscrolling: false,
 				vBarOffsetY: 0,
-				hBarOffsetX: 0
+				hBarOffsetX: 0,
+				hScrollActive: false,
+				vScrollActive: false
 			};
 			this.locked = false;
 			this.enabled = true;
@@ -459,14 +462,12 @@
 				if (ActiveTable.widgetsSet[params.widget]) {
 					var Widget = ActiveTable.widgetsSet[params.widget];
 					widget = new Widget(this, params.params);
-				} else {
+				} else if ($.isFunction(params)){
 					widget = new params(this);
+				} else {
+					throw 'widget ' + params.widget +' not found';
 				}
-				
-				if (!widget.name) {
-					console.error('unnamed widget detected');
-					return false;
-				}
+
 				//attach events
 				widget.on = {
 					filter: this._onFilterHandler.bind(this),
@@ -505,7 +506,7 @@
 			if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
 			if (options.order) this.order = options.order;
 			if (options.hiddenFields) this.hiddenFields = options.hiddenFields;
-			if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || (!options.data && this.showOnlyDescribed)) {
+			if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || options.data || (!options.data && this.showOnlyDescribed)) {
 				this.setFields(options.fields);
 			}
 			if (options.data || options.sort) {
@@ -520,7 +521,9 @@
 		},
 
 		setTemplates: function (templates) {
-			if ($.isFunction(templates)) templates = {columns: templates, cells: templates, feet: templates};
+			if ($.isFunction(templates)) {
+				templates = {columns: templates, cells: templates, feet: templates, master: templates};
+			}
 			this.templates = $.extend(true, {}, this.defaultTemplates, templates);
 		},
 
@@ -549,7 +552,7 @@
 			}
 
 			//collect visible fields
-			this.visibleFields = this.order.length ? this.order : this.data.columns;
+			this.visibleFields = this.order.length ? [].concat(this.order) : [].concat(this.data.columns);
 			for (var i = this.visibleFields.length; i--;) {
 				var fieldName = this.visibleFields[i];
 				if (!this.fields[fieldName]) throw ('field "' + fieldName + '" not found');
@@ -581,6 +584,7 @@
 		render: function (el) {
 			var selector = null;
 			if (typeof(el) == 'string') {
+				if (!this.layout) return false;
 				selector = el;
 				el = null;
 			}
@@ -680,7 +684,7 @@
 			if (this.scrollParams.autoSizing) {
 				var jqThead = this.el.find('.data-table > thead').hide();
 				var widths = [];
-				var jqThs = jqThead.find('tr:first > th');
+				var jqThs = jqThead.find('tr:first > th > .column-wrap');
 				if (!this.rowsCnt) {
 					jqThs.css({display: 'table-cell'});
 				} else {
@@ -702,11 +706,9 @@
 				lastLeftPos = 0;
 				if (this.hasFooter) {
 					var jqTfoot = this.el.find('.data-table > tfoot:first').hide();
-					var jqFeet = jqTfoot.find('tr:first > td');
+					var jqFeet = jqTfoot.find('tr:first > td > .foot-wrap');
 					if (!this.rowsCnt) {
-						jqFeet.css({display: 'table-cell'});
-					} else {
-						jqFeet.css({display: 'inline-block'});
+
 						i = 0;
 						jqFeet.each(function () {
 							$(this).outerWidth(widths[i]);
@@ -880,27 +882,34 @@
 			}
 		},
 
+		resetSort: function () {
+			this.sort = null;
+		},
+
 		/**
 		 * check or uncheck rows
-		 * @param {Number|Array} idxs
-		 * @param {Boolean} state
+		 * @param {Number|Array|Object} expr maybe idx or array of idx or expr
+		 * @param {Boolean} [state=true]
 		 */
-		check: function (idxs, state) {
-			idxs = $.isArray(idxs) ? idxs : [idxs];
-			if (!state) this._checkAll = false;
-			for (var key = 0;  key < idxs.length; key++) {
-				var idx = Number(idxs[key]);
+		check: function (expr, state) {
+			//swap arguments
+			if ($.isArray(expr) || typeof(expr) == 'number' || typeof(expr) == 'string') expr = {idx: expr};
+			if (state === undefined) state = true;
+
+			this.forEach(expr, function (row) {
+				var idx = row.idx;
 				var selectedPos = $.inArray(idx, this.selection);
 				if (state) {
-					if (~selectedPos) continue;
+					if (~selectedPos) return;
 					this.selection.push(idx);
-					continue;
+					return;
 				}
 
 				if (~selectedPos) {
 					this.selection.splice(selectedPos, 1);
 				}
-			}
+			}.bind(this));
+
 			this.emit('selectionChange');
 			this._renderChecked();
 		},
@@ -972,18 +981,18 @@
 				expr = null;
 			}
 			if (state === undefined) state = true;
-			if (!this.selectable) return;
 			this._checkAll = !expr && state;
 			var jqCheckbox = this.layout.find('th.col-checkbox .checkbox');
 			if (expr) {
-				this.forEach(expr, function (row) {
+				this.forEach(function (row) {
 					var pos = $.inArray(row.idx, this.selection);
-					if (!state && !~pos) return;
-					if (!state && ~pos) {
+					var rowState = this.data.test(row, expr) && state;
+					if (!rowState && !~pos) return;
+					if (!rowState && ~pos) {
 						this.selection.splice(pos, 1);
 						return;
 					}
-					this.selection.push(row.idx);
+					if(!~pos) this.selection.push(row.idx);
 				}.bind(this));
 
 			} else {
@@ -995,10 +1004,6 @@
 					});
 					jqCheckbox.addClass('checked-all');
 
-//				for (var key in this.data.rows) {
-//					var row = this.data.rows[key];
-//					if (this.data.test(row, this.computedFilter)) this.selection.push(row.idx);
-//				}
 				} else {
 					this.selection = [];
 					jqCheckbox.removeClass('checked-all');
@@ -1034,21 +1039,29 @@
 			this.emit('tableLock');
 		},
 
-
 		unlock: function () {
 			if (this.locked == false) return;
 			this.locked = false;
 			this.emit('tableUnlock');
 		},
 
+		/**
+		 *
+		 * @param {Number} idx
+		 * @param {String} [content]
+		 * @param {String} [animate]
+		 * @returns {*}
+		 */
 		showSubrow: function (idx, content, animate) {
 			if (!idx) return false;
 			var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
+			var row = this.data.findOne({idx: idx});
 			if (!jqRow.length) return false;
-			var jqSubrow = $(this.templates.subrow(this));
+			var tplParams = {tpl: {subrow: true}, table: this, row: row, content: content}
+			var jqSubrow = $(this.templates.subrow(tplParams));
 			jqRow.addClass('has-subrow');
-			jqSubrow.find('td').append(content);
 			jqSubrow.insertAfter(jqRow);
+			if (animate) jqSubrow.find('td').hide().show(animate);
 			return jqSubrow;
 		},
 		
@@ -1072,7 +1085,33 @@
 			var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
 			jqRow.hasClass('has-subrow') ? this.hideSubrow(idx) : this.showSubrow(idx);
 		},
-		
+
+		/**
+		 * add custom css-class for table
+		 * @param {String} cssClass
+		 * @returns {boolean}
+		 */
+		addClass: function (cssClass) {
+			if (typeof(cssClass) != 'string') return false;
+			if (~$.inArray(cssClass, this.cssClasses)) return false;
+			this.cssClasses.push(cssClass);
+			this.layout && this.layout.addClass(cssClass);
+			return true;
+		},
+
+		/**
+		 * remove custom css-class from table
+		 * @param {String} cssClass
+		 */
+		removeClass: function (cssClass) {
+			if (typeof(cssClass) != 'string') return false;
+			var pos = $.inArray(cssClass, this.cssClasses);
+			if (!~pos) return false;
+			this.cssClasses.splice(pos, 1);
+			this.layout && this.layout.removeClass(cssClass);
+			return true;
+		},
+
 		/**
 		 * save table state to cookie
 		 */
@@ -1132,14 +1171,18 @@
 				var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
 				if (vScaleFactor > 1) {
 					jqVscroll.addClass('disabled');
-					return;
+					this.layout.removeClass('vscroll-active');
+					this.scrollParams.vScrollActive = false;
+				} else {
+					jqVscroll.removeClass('disabled');
+					this.layout.addClass('vscroll-active');
+					this.scrollParams.vScrollActive = true;
+					var vBarHeight = vScaleFactor * jqScrollTrack.height();
+					var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
+					if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
+					jqScrollbar.height(vBarHeight);
+					jqScrollbar.css({top: this.scrollParams.vPos * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
 				}
-				jqVscroll.removeClass('disabled');
-				var vBarHeight = vScaleFactor * jqScrollTrack.height();
-				var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
-				if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
-				jqScrollbar.height(vBarHeight);
-				jqScrollbar.css({top: this.scrollParams.vPos * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
 			}
 
 
@@ -1167,9 +1210,13 @@
 				var hScaleFactor = this.scrollParams.overflowWidth / this.scrollParams.layerWidth;
 				if (hScaleFactor >= 1) {
 					jqHscroll.addClass('disabled');
+					this.scrollParams.hScrollActive = false;
+					this.layout.removeClass('hscroll-active');
 					return;
 				}
 				jqHscroll.removeClass('disabled');
+				this.layout.addClass('hscroll-active');
+				this.scrollParams.hScrollActive = true;
 				var hBarWidth = hScaleFactor * jqScrollTrack.width();
 				var hBarMinWidth = jqScrollbar.css('min-width').split('px')[0];
 				if (hBarWidth < hBarMinWidth) hBarWidth = hBarMinWidth;
@@ -1215,6 +1262,11 @@
 			} else if (i == rowsOnPageCnt) {
 				this.layout.find('.dtable th.col-checkbox .checkbox').addClass('checked');
 			}
+			if (this.selection.length) {
+				this.layout.addClass('has-selected');
+			} else {
+				this.layout.removeClass('has-selected');
+			}
 		},
 
 		/**
@@ -1256,6 +1308,7 @@
 				this.pageY = e.pageY;
 
 				if (this.scrollParams.isVscrolling) {
+					e.preventDefault()
 					var jqScrollTrack = this.el.find('.vscroll:first .scroll-track');
 					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
 					var maxScroll = jqScrollTrack.height() - jqScrollbar.outerHeight();
@@ -1267,6 +1320,7 @@
 
 
 				if (this.scrollParams.isHscrolling) {
+					e.preventDefault()
 					var jqScrollTrack = this.el.find('.hscroll:first .scroll-track');
 					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
 					var maxScroll = jqScrollTrack.width() - jqScrollbar.outerWidth();
@@ -1293,22 +1347,27 @@
 			}.bind(this));
 
 			this.el.on('mousedown.table', '.vscroll .at-scrollbar', function (e) {
+				e.preventDefault()
 				var jqScrollbar = $(e.currentTarget);
 				this.scrollParams.vBarOffsetY = e.offsetY || e.originalEvent.layerY;
 				this.scrollParams.isVscrolling = true;
+				jqScrollbar.closest('.vscroll').addClass('active');
 				this.disableTextSelection();
 			}.bind(this));
 
 			this.el.on('mousedown.table', '.hscroll .at-scrollbar', function (e) {
+				e.preventDefault()
 				var jqScrollbar = $(e.currentTarget);
 				this.scrollParams.hBarOffsetX = e.offsetX || e.originalEvent.layerX;
 				this.scrollParams.isHscrolling = true;
+				jqScrollbar.closest('.hscroll').addClass('active');
 				this.disableTextSelection();
 			}.bind(this));
 
 			this.el.on('mouseup.table', function (e) {
 				this.scrollParams.isVscrolling = false;
 				this.scrollParams.isHscrolling = false;
+				this.el.find('.vscroll, .hscroll').removeClass('active');
 				this.enableTextSelection();
 			}.bind(this));
 
@@ -1426,6 +1485,7 @@
 				fnMouseOutRow(jqPrevRow);
 				var jqRow = $(e.currentTarget);
 				if (jqRow.hasClass('fake')) return;
+				if (jqRow.hasClass('vscroll-overflow-tr')) return;
 				jqRow.addClass('hovered');
 				jqRow.find('.editable').each(function () {
 					var jqCell = $(this);
@@ -1441,10 +1501,12 @@
 						jqCell.html(jqField);
 						jqCell.data('content', cellContent);
 					}
-
 				});
 			});
 
+			this.el.on('mouseleave.table', '.vscroll-layer', function (e) {
+				fnMouseOutRow(this.el.find('tr.hovered:not(.focused)'));
+			}.bind(this));
 
 			//input focusin
 			this.el.on('focusin.table', 'tr .editable input', function (e) {
@@ -1553,7 +1615,7 @@
 				var $input = $target.find('input');
 				if ($target.hasClass('checked')) {
 					$target.removeClass('checked');
-					$input.val(0);
+					$input.val('');
 				} else {
 					$target.addClass('checked');
 					$input.val(1);
@@ -1564,6 +1626,7 @@
 
 			//dropdown
 			this.el.on('click.table', '.at-dropdown-button', function (e) {
+				e.preventDefault();
 				var $dropdown = $(e.currentTarget).closest('.at-dropdown');
 				var id = 'at-dropdown-' + $.now();
 				if ($dropdown.hasClass('open')) return;
@@ -1735,7 +1798,8 @@
 
 			if (table.selectable) {
 				columns += table.templates.checkboxHead({tplCheckboxHead: true, table: table});
-				feet += table.templates.checkboxFoot({tplCheckboxFoot: true, table: table});
+				var checkboxFoot = table.templates.checkboxFoot({tpl:{checkboxFoot: true}, table: table});
+				feet += table.templates.checkboxFootWrap({tpl: {checkboxFootWrap: true}, table: table, content: checkboxFoot});
 			}
 
 			for (var key = 0; key < table.visibleFields.length; key++) {
@@ -1892,7 +1956,11 @@
 			if (!table.canSelectText) classes += '.unselectable';
 			if (table.scrollParams.vertical) classes += '.has-vscroll';
 			if (table.scrollParams.horizontal) classes += '.has-hscroll';
+			if (table.scrollParams.hScrollActive) classes +='.hscroll-active';
+			if (table.scrollParams.vScrollActive) classes +='.vscroll-active';
+			if (table.selection.length) classes +='.has-selected';
 			if (table.locked) classes += '.locked';
+			if (table.cssClasses.length) classes += '.' + table.cssClasses.join('.');
 			return context.ActiveTable.Haml.toHtml(["%div." + classes,
 				['.table-wrap',
 					['.lock-overlay'],
@@ -1980,7 +2048,7 @@
 						case 'date': cell.display = table.utils.dateToSting(row[fieldName]) || field.defaultValue || '';break;
 						case 'number':
 							if (cell.display !== null) {
-								if (!cell.display % 1) cell.display = cell.display.toFixed(2);
+								if (cell.display % 1) cell.display = cell.display.toFixed(2);
 								cell.display = String(cell.display).replace(/(\d)(?=(\d\d\d)+([^\d]|$))/g, '$1 ');
 							}
 							break;
@@ -1995,7 +2063,6 @@
 					cell.display = '';
 				}
 
-
 				var cellWrapParams = cellParams;
 				cellWrapParams.tpl = {cellWrap: true, field: {}},
 					cellWrapParams.tpl.field = fieldName;
@@ -2006,16 +2073,19 @@
 		},
 
 		checkboxHead: function (p) {
-			return context.ActiveTable.Haml.toHtml(["%th.col-checkbox", [".checkbox"]]);
+			return context.ActiveTable.Haml.toHtml(["%th.col-checkbox", ['.column-wrap', [".checkbox"]]]);
 		},
 
 		checkboxCell: function (p) {
 			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox.col-first", {rel: p.row.idx}, [".checkbox", {rel: p.row.idx}]]);
 		},
 
+		checkboxFootWrap: function (p) {
+			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox", ['.footer-wrap', p.content]]);
+		},
 
 		checkboxFoot: function (p) {
-			return context.ActiveTable.Haml.toHtml(["%td.col-checkbox"]);
+			return '';
 		},
 
 		emptyRow: function (p) {
@@ -2065,7 +2135,12 @@
 			var table = p.table;
 			var colspan = table.visibleFields.length;
 			if (table.selectable) colspan++;
-			return context.ActiveTable.Haml.toHtml(["%tr.subrow", ["%td", {colspan: colspan} ]]);
+			var content = p.content;
+			if (!content && table.templates.master) {
+				var tplParams = $.extend({}, {tpl: {subrowContent: true}}, p)
+				content = table.templates.master(tplParams);
+			}
+			return context.ActiveTable.Haml.toHtml(["%tr.subrow", ["%td", {colspan: colspan}, content ]]);
 		},
 
 		columnWrap: function (params) {
@@ -2073,7 +2148,9 @@
 			var isLast = params.isFirst ? '.col-last' : '';
 			var type = params.type ? '.' + params.type : '';
 			var sort = params.sort ? '.' + params.sort : '';
-			return context.ActiveTable.Haml.toHtml(["%th.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, params.content]);
+			var content = '<div class="column-wrap col-' + params.sFieldName + '-wrap">' + params.content + '</div>'
+			return context.ActiveTable.Haml.toHtml(
+				["%th.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, content]);
 		},
 
 
@@ -2082,10 +2159,12 @@
 			var isLast = params.isFirst ? '.col-last' : '';
 			var type = params.type ? '.' + params.type : '';
 			var sort = params.sort ? '.' + params.sort : '';
-			return context.ActiveTable.Haml.toHtml(["%td.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, params.content]);
+			var content = '<div class="foot-wrap col-' + params.sFieldName + '-wrap">' + params.content + '</div>'
+			return context.ActiveTable.Haml.toHtml(["%td.col-" + params.sFieldName + isFirst + isLast + type + sort, {rel: params.fieldName, title: params.field.hint}, content]);
 		},
 
 		cellWrap: function (p) {
+			var sort = (p.sort ? '.' + p.sort: '');
 			var sort = (p.sort ? '.' + p.sort: '');
 			var attr = {rel: p.fieldName, value: p.row[p.fieldName]};
 			var editable = (p.cell.editable ? ".editable" : "");

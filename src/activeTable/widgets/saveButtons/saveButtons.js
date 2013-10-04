@@ -1,4 +1,4 @@
-(function (context) {
+;(function (context) {
 
 	context.ActiveTable.installWidget('SaveButtons', {
 

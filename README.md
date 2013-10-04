@@ -1,6 +1,8 @@
-ActiveTables by Holiber
-=========================
+ActiveTables
+============
+Interactive template-based component for displaing tables based on [ActiveData](https://github.com/holiber/activedata) collections
 
-run build.sh script to pack scripts
+#Build
+run **build.sh** script to pack scripts
 
-then see dist directory for results
+then see **dist** directory for results

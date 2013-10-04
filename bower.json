@@ -1,0 +1,10 @@
+{
+	"name": "activetable",
+	"version": "0.1.0",
+	"ignore": [
+		"**/.*"
+	],
+	"dependencies": {
+		"jquery": ">=1.8.0"
+	}
+}
