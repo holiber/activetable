@@ -71,6 +71,11 @@
 			this.el.on('click' + namespace, '.nothing', this.reset.bind(this));
 		},
 
+		_onTableScroll: function(scroll){
+			if(scroll.offsetX === undefined) return;
+			this.el.css({left: -scroll.offsetX});
+		},
+
 		_receive: function (eventName, data) {
 			this._super(eventName, data);
 			switch (eventName) {
@@ -79,6 +84,9 @@
 				case 'selectionChange':
 				case 'render':
 					this.render();
+					break;
+				case 'scroll':
+					this._onTableScroll(data);
 					break;
 			}
 		},
