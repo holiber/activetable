@@ -1223,7 +1223,7 @@
 				jqScrollbar.width(hBarWidth);
 				jqScrollbar.css({left: this.scrollParams.hPos * (jqScrollTrack.width() - hBarWidth) / (this.scrollParams.layerWidth - this.scrollParams.overflowWidth)});
 			}
-
+			this.emit('scroll', {offsetY: offsetY, offsetX: offsetX});
 		},
 
 		enableTextSelection: function () {
