@@ -1,4 +1,4 @@
-ActiveTables
+ActiveTable
 ============
 Interactive template-based component for displaing tables based on [ActiveData](https://github.com/holiber/activedata) collections
 
