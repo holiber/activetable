@@ -1,0 +1,479 @@
+
+.active-table .dtable {position: relative;}
+.active-table.unselectable,
+.active-table .unselectable {
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+
+.active-table .table-wrap {position: relative}
+.active-table .lock-overlay{display: none;}
+.active-table.locked .lock-overlay{
+	display: block;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	background-color: #ffffff;
+	z-index: 10;
+	opacity: 0.5;
+}
+
+.data-table {
+	width:100%;
+	clear:both;
+	border-collapse:separate;
+	border:1px solid #d0d0d0;
+	border-top:0;
+}
+
+.data-table th {
+	position: relative;
+	vertical-align:middle;
+	border-bottom: 1px solid #e3e3e3;
+	text-align:center;
+	color:#808080;
+	background-color: #e8e8e8;
+	font-weight:bold;
+	height:2em;
+	cursor: pointer;
+	padding: 0
+}
+
+.data-table tfoot td {vertical-align:middle;text-align:center;color:black;padding:6px 9px 6px;font-weight:bold;height:10px;border-top: 1px solid #d2d2d2;border-bottom: 1px solid #d2d2d2;}
+
+.data-table th.asc {color: #303030}
+.data-table th[rel]:hover:after {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+	border-top: 1px solid #c5c5c5;
+	height: 1px;
+	display: block;
+}
+
+.data-table thead th[rel]:hover:before {
+	content: '';
+	position: absolute;
+	width: 15px;
+	height: 15px;
+	left: 50%;
+	top: 0;
+	margin-left: -7px;
+	background: url("icons.png") -24px -5px no-repeat;
+}
+
+.data-table th[rel].asc:after,
+.data-table th[rel].asc:hover:after {
+	content: '';
+	position: absolute;
+	top: auto;
+	bottom: 0;
+	right: 0;
+	left: 0;
+	border-top: 0;
+	border-bottom: 1px solid #a8a8a8;
+	height: 1px;
+	display: block;
+}
+
+.data-table th[rel].asc:before,
+.data-table th[rel].asc:hover:before {
+	content: '';
+	position: absolute;
+	width: 15px;
+	height: 15px;
+	left: 50%;
+	bottom: 0;
+	top: auto;
+	margin-left: -7px;
+	background: url("icons.png") -38px 5px no-repeat
+}
+
+.data-table th.desc {color: #303030}
+.data-table th[rel].desc:after {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+	border-top: 1px solid #a8a8a8;
+	height: 1px;
+	display: block;
+}
+
+.data-table th[rel].desc:before {
+	content: '';
+	position: absolute;
+	width: 15px;
+	height: 15px;
+	left: 50%;
+	top: 0;
+	margin-left: -7px;
+	background: url("icons.png") -7px -5px no-repeat;
+}
+
+
+
+.data-table th > .column-wrap,
+.data-table th > .foot-wrap
+{display: table-cell;vertical-align: middle;padding:0 1em; box-sizing: border-box}
+
+.data-table th:last-child > .column-wrap,
+.data-table th:last-child > .foot-wrap
+{padding-right: 15px}
+
+.data-table td:last-child {padding-right: 15px}
+
+.active-table thead {
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+
+.active-table tfoot tr{height: 3em;}
+
+.data-table tbody td {padding: 1em; text-align:center;border-top: 1px solid #e8e8e8}
+.data-table tbody td.vscroll-overflow-td{ border-top: none; }
+
+.data-table td.col-checkbox	{
+	width:36px;
+	min-width: 36px;
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+
+.data-table .col-checkbox {padding: 0}
+.data-table th.col-checkbox .column-wrap {width: 36px}
+
+.data-table input,
+.data-table textarea {width:100%;margin:-2px -5px;padding:1px 3px;border-width:1px;}
+
+.data-table tbody .selected .desc,
+.data-table tbody .selected .asc,
+.data-table tbody .focused .desc,
+.data-table tbody .focused .asc {background: #d6e5f5;}
+
+.data-table .checkbox {
+	position: relative;
+	border: 1px solid #c0c0c0;
+	margin: 0 auto;
+	height: 11px;
+	min-height: inherit;
+	width: 11px;
+	display: block;
+	padding: 0px;
+	background-color: white;
+}
+
+.data-table .checkbox.checked:after,
+.data-table .checkbox.checked-all:after{
+	position:absolute;
+	background: url(icons.png) -178px 0 no-repeat;
+	top: -2px;
+	left: 0px;
+	right: -3px;
+	bottom: -2px;
+	content: ' ';
+}
+
+.data-table tbody .col-checkbox:hover .checkbox{box-shadow: 0 0 2px #c0c0c0 inset;}
+
+.data-table thead .checkbox.checked-all:after{background-position: -178px 0;}
+.data-table thead .checkbox.checked:after{background-position: -155px 0;}
+
+.data-table input.error,
+.data-table .hovered input.error,
+.data-table .focused input.error,
+.data-table .selected input.error	{color:red!important;}
+
+.data-table .editable.invalid input {color: red!important; border-color: red!important;;}
+
+.data-table tbody tr.hovered > td {background-color: #ecf0f5}
+.data-table tbody tr.focused > td	{background-color:#d6e5f5}
+.data-table tbody tr.selected > td {background-color:#edf2fc; /*border-top: 1px solid #b7cce4; border-bottom: 1px solid #b7cce4*/}
+
+
+.data-table tbody tr.has-subrow td,
+.data-table tbody tr.subrow td {background: none}
+.data-table tbody tr.has-subrow td {border-top: 1px solid #D0D0D0;background: none}
+.data-table tbody tr.subrow td {border-bottom: 1px solid #D0D0D0;background: none}
+
+
+/* fake rows */
+.data-table tr.fake .col-checkbox .checkbox{display: none;}
+
+/* widgets*/
+.widgets {position: relative;}
+.widget {display: inline-block; vertical-align: top; height: 39px}
+
+/* pager */
+.active-table .pager {display: none}
+
+/* scroll */
+.active-table.has-vscroll .dtable {
+    height: 100%;
+}
+
+.active-table.has-vscroll .data-table,
+.active-table.has-hscroll .data-table {
+    height: 100%;
+}
+
+.active-table.has-hscroll .dtable {
+    padding-bottom: 12px;
+}
+
+
+.active-table.has-hscroll .data-table {
+    border-left: none;
+}
+
+.active-table .at-scrollbar {
+	background-color: #d8d8d8;
+	position: absolute;
+	cursor: default;
+}
+
+
+.active-table .at-scrollbar:hover,
+.active-table .hscroll.active .at-scrollbar,
+.active-table .vscroll.active .at-scrollbar
+{background-color: #b5b5b5}
+
+.active-table .vscroll {
+	position: absolute;
+	background-color: #f6f6f6;
+	width: 12px;
+	top: 42px;
+	right: 1px;
+	bottom: 40px;
+}
+
+.active-table .vscroll.disabled {display: none}
+
+.active-table .scroll-btn {
+	display: none;/*disabled for this skin*/
+}
+
+
+.active-table .vscroll .scroll-track {
+	background-color: #f7f7f7;
+	width: 11px;
+	position: absolute;
+	top: 0;
+	bottom: 0px;
+}
+
+.active-table .vscroll .at-scrollbar{
+    width: 11px;
+    min-height: 10px;
+    top: 0;
+    cursor: default;
+}
+
+.active-table .vscroll.disabled .at-scrollbar,
+.active-table .hscroll.disabled .at-scrollbar{
+    display: none;
+}
+
+.active-table .vscroll-overflow-tr.hovered > td {
+    background: none;
+}
+
+.active-table .vscroll-overflow-td {
+    padding: 0 !important;
+    height: 100%;
+    vertical-align: top;
+}
+
+.active-table .vscroll-overflow {
+    overflow: hidden;
+    position: relative;
+    vertical-align: top;
+    padding: 0;
+    /*box-shadow: inset 0 0 15px #e8e8e8;*/
+}
+
+.active-table .vscroll-layer {
+    position: absolute;
+    width: 100%;
+    top: 0;
+}
+
+.active-table .hscroll-overflow {
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    border-left: 1px solid #d0d0d0;
+}
+
+.active-table .hscroll-layer {
+    position: absolute;
+}
+
+.active-table.has-hscroll .data-table thead,
+.active-table.has-vscroll .data-table thead {
+    white-space: nowrap;
+}
+
+.active-table.has-hscroll .data-table th,
+.active-table.has-vscroll .data-table th{
+    white-space: normal;
+}
+
+.active-table.has-hscroll .data-table tfoot td,
+.active-table.has-vscroll .data-table tfoot td{
+    white-space: normal;
+}
+
+.active-table .hscroll {
+	position: absolute;
+	height: 12px;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	border: 1px solid #d2d2d2;
+	border-top: 0;
+}
+
+.active-table .scroll-left {
+    top: 0px;
+    left: 0;
+    width: 11px;
+    height: 11px;
+    border-right: none;
+    background-position: -239px -3px;
+}
+
+
+.active-table .scroll-right {
+    top: 0px;
+    right: 12px;
+    width: 11px;
+    height: 11px;
+    border-left: none;
+    background-position: -254px -3px;
+}
+
+.active-table .hscroll .scroll-track {
+    background-color: #f7f7f7;
+    height: 11px;
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    cursor: default;
+}
+
+.active-table .hscroll .at-scrollbar{
+	height: 11px;
+	min-width: 10px;
+	left: 0;
+}
+
+/* ui */
+.at-icon {
+	font-size: 1px;
+	line-height: 1px;
+	background: transparent none center center no-repeat;
+	background-image: url("icons.png");
+	width: 15px;
+	height: 15px;
+	display: inline-block;
+	vertical-align: top;
+	margin-top: -2px;
+}
+
+.at-icon.at-view {background-position: -331px 0;}
+.at-icon.at-left {background-position: -295px 0;}
+.at-icon.at-right {background-position: -310px 0;}
+.at-icon.at-down {background-position: -32px 0px;}
+.at-icon.at-search {background-position: -354px 0px;}
+
+
+.at-button {
+	font-size: 11px;
+	text-decoration: none;
+	padding: 6px 10px;
+	line-height: 15px;
+	background: #f6f6f6;
+	text-align: center;
+	position: relative;
+	border: 1px solid #cacaca;
+	cursor: pointer;
+	height: 29px;
+	display: inline-block;
+	text-align: center;
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+}
+
+.at-button:hover {
+	text-decoration: none;
+	background: -webkit-gradient(linear, 0 0, 0 100%, from(#fff), to(#f6f6f6));
+	background: -webkit-linear-gradient(#fff, #f6f6f6 100%);
+	background: -moz-linear-gradient(#fff, #f6f6f6 100%);
+	background: -ms-linear-gradient(#fff, #f6f6f6 100%);
+	background: -o-linear-gradient(#fff, #f6f6f6 100%);
+	background: linear-gradient(#fff, #f6f6f6 100%);
+	background-color: #f6f6f6;
+	-webkit-box-shadow: #E8E8E8 0 1px 1px;
+	-moz-box-shadow: #E8E8E8 0 1px 1px;
+	box-shadow: #E8E8E8 0 1px 1px;
+}
+
+.at-checkbox {
+	display: inline-block;
+	padding: 2px 5px 7px 20px;
+	line-height: 14px;
+	cursor: pointer;
+	position: relative;
+	margin-top: -1px;
+	min-height: 10px;
+	min-width: 10px;
+}
+
+.at-checkbox input {display: none}
+
+.at-checkbox span {
+	background: white;
+	width: 11px;
+	height: 11px;
+	position: absolute;
+	top: 3px;
+	left: 0;
+	border: 1px solid #c0c0c0;
+}
+
+.at-checkbox.checked span:after {
+	position:absolute;
+	background: url(icons.png) -178px 0 no-repeat;
+	top: -2px;
+	left: 0px;
+	right: -3px;
+	bottom: -2px;
+	content: ' ';
+}
+
+.at-checkbox:hover span {box-shadow: 0 0 2px #c0c0c0 inset}
+
+.at-dropdown {position: relative}
+
+.at-dropdown-content {
+	display: none;
+	padding: 10px;
+	background-color: #ffffff;
+	border: 1px solid #cacaca;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 10;
+	box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+.at-dropdown.open .at-dropdown-content {display: block}
+
