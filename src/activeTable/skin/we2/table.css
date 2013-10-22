@@ -99,8 +99,14 @@
 
 
 .data-table th > .column-wrap,
-.data-table th > .foot-wrap
-{display: table-cell;vertical-align: middle;padding:0px 5px 0px;line-height: 16px;box-sizing: border-box}
+.data-table th > .foot-wrap{
+	vertical-align: middle;padding:0px 5px 0px;line-height: 16px;box-sizing: border-box
+}
+
+.active-table.has-vscroll .data-table th > .column-wrap,
+.active-table.has-vscroll .data-table th > .foot-wrap {
+	display: table-cell;
+}
 
 .data-table th:last-child > .column-wrap,
 .data-table th:last-child > .foot-wrap

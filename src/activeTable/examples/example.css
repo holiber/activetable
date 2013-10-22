@@ -1,0 +1,13 @@
+body,html {margin:0;padding: 0;color: #555;}
+body {font-family: Lato, "Helvetica Neue", Helvetica, Arial, sans-serif}
+h1 {padding: 10px;margin: 0;border-bottom: 1px solid #ccc;background-color: #eee;}
+.table-place {
+	margin: 10px;
+	min-height: 300px;
+	max-width: 600px;
+}
+
+.col-image img {
+	max-width: 15px;
+	max-height: 15px;
+}

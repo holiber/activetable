@@ -1,3 +1,8 @@
+/**
+ * v0.2.0
+ * Available via the MIT license.
+ * see: http://github.com/holiber/activetable
+ */
 ;(function (context) {
 
 	var ARROWS_BS_DEL = [37,39,8,46],
@@ -46,80 +51,9 @@
 	};
 
 
-	/* Simple JavaScript Inheritance
-	 * By John Resig http://ejohn.org/
-	 * MIT Licensed.
-	 */
-	// Inspired by base2 and Prototype
-		var initializing = false, fnTest = /xyz/.test(function(){xyz;}) ? /\b_super\b/ : /.*/;
-		// The base Class implementation (does nothing)
-		var Class = function(){};
-
-		// Create a new Class that inherits from this class
-		Class.extend = function(prop) {
-			var _super = this.prototype;
-
-			// Instantiate a base class (but only create the instance,
-			// don't run the init constructor)
-			initializing = true;
-			var prototype = new this();
-			initializing = false;
-
-			// Copy the properties over onto the new prototype
-			for (var name in prop) {
-				if (name == '_static') continue;
-				// Check if we're overwriting an existing function
-				prototype[name] = typeof prop[name] == "function" &&
-						typeof _super[name] == "function" && fnTest.test(prop[name]) ?
-						(function(name, fn){
-							return function() {
-								var tmp = this._super;
-
-								// Add a new ._super() method that is the same method
-								// but on the super-class
-								this._super = _super[name];
-
-								// The method only need to be bound temporarily, so we
-								// remove it when we're done executing
-								var ret = fn.apply(this, arguments);
-								this._super = tmp;
-
-								return ret;
-							};
-						})(name, prop[name]) :
-						prop[name];
-			}
-
-			//static props addition
-			prop['_static'] = $.extend({}, this._static, prop['_static']);
-			if (prop['_static']) {
-				for (var name in prop['_static']) {
-					Class[name] =  prop['_static'][name];
-				}
-			}
-			Class._static = prop['_static'];
-
-			// The dummy class constructor
-			function Class() {
-				// All construction is actually done in the init method
-				if ( !initializing && this.init )
-					this.init.apply(this, arguments);
-			}
-
-			// Populate our constructed prototype object
-			Class.prototype = prototype;
-
-			// Enforce the constructor to be what we expect
-			Class.prototype.constructor = Class;
-
-			// And make this class extendable
-			Class.extend = arguments.callee;
-
-			return Class;
-		};
-
+	var Class = Qstore.Class;
 	/**
-	 * Haml templater by A.Gutnikov
+	 * Haml templater by alxgutnikov
 	 */
 	var Haml = (function() {
 
@@ -214,8 +148,7 @@
 		return Haml;
 	})();
 
-	
-	
+
 	var tableUtils = {
 		/**
 		* @return {Number} object fields count
@@ -371,7 +304,7 @@
 			this.jqWidgets = null; //widgets container
 			this.templates = null; //a set of templates
 			this.name = null; //table name, used to store some table options in cookies
-			this.data = null; //instanse of ActiveData
+			this.data = null; //instanse of Qstore
 			this.visibleFields = []; //store list of all visible fields
 			this.showOnlyDescribed = false; //show only fields described in "order" and "fields"
 			this.fields = null; //store all table fields
@@ -516,7 +449,7 @@
 		},
 
 		setData: function (data) {
-			this.data = (data instanceof ActiveData) ? (data || {columns: [], rows: []}): new ActiveData(data);
+			this.data = (data instanceof Qstore) ? (data || {columns: [], rows: []}): new Qstore(data);
 			this.data.listener = $.proxy(this._dataListener, this);
 		},
 
@@ -801,7 +734,7 @@
 		},
 
 		/**
-		 * same as ActiveData.find, but only on filtered data
+		 * same as Qstore.find, but only on filtered data
 		 * @param {Object|Function} expr
 		 * @return {Array} rows
 		 */
@@ -1733,53 +1666,53 @@
 			this.data.rollback();
 			this.emit('rollback');
 			this.render();
-		},
-		
-		_static: {
-			Haml: Haml,
+		}
+	},
+	// STATIC PROPS:
+	{
+
+		Haml: Haml,
 			Widget: Widget,
 			utils: tableUtils,
 			widgetsSet: {},
 
-			/**
-			* installWidget ([parent], name, prototype)
-			*/
-			installWidget: function (parent, name, prototype ) {
-				switch (arguments.length) {
-					case 2:
-						prototype = name;
-						name = parent;
-						var Parent = ActiveTable.Widget;
+		/**
+		 * installWidget ([parent], name, prototype)
+		 */
+		installWidget: function (parent, name, prototype ) {
+			switch (arguments.length) {
+				case 2:
+					prototype = name;
+					name = parent;
+					var Parent = ActiveTable.Widget;
 					break;
-					case 3:
-						var Parent = ActiveTable.getWidget(parent);
-						if (!Parent) {
-							console.log('parent widget not found');
-							return false;
-						}
-					break;
-					default:
-						console.error('wrong arguments count');
+				case 3:
+					var Parent = ActiveTable.getWidget(parent);
+					if (!Parent) {
+						console.log('parent widget not found');
 						return false;
+					}
 					break;
-				}
-
-				var NewWidget = Parent.extend(prototype);
-				NewWidget.prototype.componentName = name;
-				ActiveTable.widgetsSet[name] = NewWidget;
-			},
-
-			installDefaultTemplates: function(templates) {
-				if (!this.prototype.defaultTemplates) this.prototype.defaultTemplates = {};
-				this.prototype.defaultTemplates = $.extend({}, this.prototype.defaultTemplates, templates);
-			},
-
-			getWidget: function (name) {
-				return this.widgetsSet[name];
+				default:
+					console.error('wrong arguments count');
+					return false;
+					break;
 			}
-			
+
+			var NewWidget = Parent.extend(prototype);
+			NewWidget.prototype.componentName = name;
+			ActiveTable.widgetsSet[name] = NewWidget;
+		},
+
+		installDefaultTemplates: function(templates) {
+			if (!this.prototype.defaultTemplates) this.prototype.defaultTemplates = {};
+			this.prototype.defaultTemplates = $.extend({}, this.prototype.defaultTemplates, templates);
+		},
+
+		getWidget: function (name) {
+			return this.widgetsSet[name];
 		}
-		
+
 	});
 
 
@@ -1869,7 +1802,7 @@
 			// ROWS:
 
 			var rows = '';
-			var data = table.data.find(table.computedFilter);
+			var data = table.data.find(table.computedFilter || true);
 			var from = table.page * table.perPage - table.perPage;
 			var to = from + table.perPage;
 			var odd = !!(from % 2);

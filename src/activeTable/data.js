@@ -1,80 +1,80 @@
+/**
+ * @license Qstore 0.5.0 by Holiber
+ * work with collections
+ *
+ * Available via the MIT license.
+ * see: http://github.com/holiber/activedata
+ */
 ;(function (context) {
 
-	/* Simple JavaScript Inheritance
-	 * By John Resig http://ejohn.org/
-	 * MIT Licensed.
-	 */
-	// Inspired by base2 and Prototype
-	var initializing = false, fnTest = /xyz/.test(function(){xyz;}) ? /\b_super\b/ : /.*/;
-	// The base Class implementation (does nothing)
-	var Class = function(){};
+	//inheritance realisation
+	var Class = function () {}
+	Class.extend = function(props, staticProps) {
 
-	// Create a new Class that inherits from this class
-	Class.extend = function(prop) {
-		var _super = this.prototype;
-
-		// Instantiate a base class (but only create the instance,
-		// don't run the init constructor)
-		initializing = true;
-		var prototype = new this();
-		initializing = false;
-
-		// Copy the properties over onto the new prototype
-		for (var name in prop) {
-			if (name == '_static') continue;
-			// Check if we're overwriting an existing function
-			prototype[name] = typeof prop[name] == "function" &&
-					typeof _super[name] == "function" && fnTest.test(prop[name]) ?
-					(function(name, fn){
-						return function() {
-							var tmp = this._super;
-
-							// Add a new ._super() method that is the same method
-							// but on the super-class
-							this._super = _super[name];
-
-							// The method only need to be bound temporarily, so we
-							// remove it when we're done executing
-							var ret = fn.apply(this, arguments);
-							this._super = tmp;
-
-							return ret;
-						};
-					})(name, prop[name]) :
-					prop[name];
+		var mixins = [];
+		if ({}.toString.apply(arguments[0]) == "[object Array]") {
+			mixins = arguments[0];
+			props = arguments[1];
+			staticProps = arguments[2];
 		}
+		function Constructor() {
+			this.init && this.init.apply(this, arguments);
+		}
+		Constructor.prototype = Class.inherit(this.prototype);
+		Constructor.prototype.constructor = Constructor;
+		Constructor.extend = Class.extend;
+		copyWrappedProps(staticProps, Constructor, this);
 
-		prop['_static'] = $.extend({}, this._static, prop['_static']);
-		if (prop['_static']) {
-			for (var name in prop['_static']) {
-				Class[name] =  prop['_static'][name];
+		for (var i = 0; i < mixins.length; i++) {
+			copyWrappedProps(mixins[i], Constructor.prototype, this.prototype);
+		}
+		copyWrappedProps(props, Constructor.prototype, this.prototype);
+		return Constructor;
+	};
+
+	var fnTest = /xyz/.test(function() {xyz}) ? /\b_super\b/ : /./;
+
+	function copyWrappedProps(props, targetPropsObj, parentPropsObj) {
+		if (!props) return;
+
+		for (var name in props) {
+			if (typeof props[name] == "function"
+				&& typeof parentPropsObj[name] == "function"
+				&& fnTest.test(props[name])) {
+				targetPropsObj[name] = wrap(props[name], parentPropsObj[name]);
+			} else {
+				targetPropsObj[name] = props[name];
 			}
 		}
-		Class._static = prop['_static'];
 
-		// The dummy class constructor
-		function Class() {
-			// All construction is actually done in the init method
-			if ( !initializing && this.init )
-				this.init.apply(this, arguments);
+	}
+
+	function wrap(method, parentMethod) {
+		return function() {
+			var backup = this._super;
+
+			this._super = parentMethod;
+
+			try {
+				return method.apply(this, arguments);
+			} finally {
+				this._super = backup;
+			}
 		}
+	}
 
-		// Populate our constructed prototype object
-		Class.prototype = prototype;
-
-		// Enforce the constructor to be what we expect
-		Class.prototype.constructor = Class;
-
-		// And make this class extendable
-		Class.extend = arguments.callee;
-
-		return Class;
+	Class.inherit = Object.create || function(proto) {
+		function F() {}
+		F.prototype = proto;
+		return new F;
 	};
-	
-	var ActiveData = context.ActiveData = Class.extend({
+
+	/*Qstore*/
+	var Qstore = context.Qstore = Class.extend({
 
 		init: function (reduce) {
 			this.changes = {};
+			this.softMode = Qstore.softMode;
 			this.sortFields = null;
 			this.reduce = $.extend({}, reduce);
 			var unpacked = this.unpack(reduce);
@@ -93,7 +93,6 @@
 		size: function () {
 			return (this.rows && this.rows.length) || 0;
 		},
-
 
 		/**
 		 * unpack reduce data
@@ -153,153 +152,62 @@
 
 		/**
 		 * find rows
-		 * find([data,]  selector [,fields]);
-		 * @return {Array}
-		 * @example
-		 *  //complex query
-		 *  var items = data.find({color: ['red', 'green'], amount: {$gt: 10, $lt: 20}, $and: {weight: 100, width: 200} });
-		 * @example
-		 *  //static use:
-		 *  var fruits = [{type: 'apple', color: 'red'}, {type: 'apple', color: 'green'}];
-		 *  var redApples = data.find(fruits, {color: 'red'}
-		 * @example
-		 *  //selection of fields to be added to the result
-		 *  var fruits = [{type: 'apple', color: 'red', weight: 24}, {type: 'apple', color: 'green', weight: 20}];
-		 *  var redApplesWeights = data.find(fruits, {color: 'red', ['weight']}
+		 * @param {Object|Function|Boolean} expr
+		 * @param {Array|Boolean} [fields=true]
+		 * @param {Object} [options]
+		 * @returns {Array}
 		 */
-		find: function (opt1, opt2) {
-			if (arguments.length == 1) {
-				var data = this.rows;
-				var expr = opt1;
-			}
-
-			if (arguments.length == 2) {
-				if ($.isArray(opt2)) {
-					var fieldsToAdd = opt2;
-					var data = this.rows;
-					var expr = opt1;
-				} else {
-					var data = opt1;
-					var expr = opt2;
-				}
-			}
-
-			var result = [];
-			for (var key = 0; key < data.length; key++) {
-				var row = data[key];
-				if (expr !== true && !this.test(row, expr)) continue;
-				if (fieldsToAdd) {
-					var filteredRow = {};
-					for (var i = fieldsToAdd.length; i--;) {
-						filteredRow[fieldsToAdd[i]] = row[fieldsToAdd[i]];
-					}
-					result.push(filteredRow);
-					continue;
-				}
-				result.push(row);
-			}
-			return result;
-		},
-
-		findOne: function (opt1, opt2) {
-			if (arguments.length == 1) {
-				var data = this.rows;
-				var expr = opt1;
-			}
-
-			if (arguments.length == 2) {
-				if ($.isArray(opt2)) {
-					var fieldsToAdd = opt2;
-					var data = this.rows;
-					var expr = opt1;
-				} else {
-					var data = opt1;
-					var expr = opt2;
-				}
-			}
-
-			var result = [];
-			for (var key = 0; key < data.length; key++) {
-				var row = data[key];
-				if (expr !== true && !this.test(row, expr)) continue;
-				if (fieldsToAdd) {
-					var filteredRow = {};
-					for (var i = fieldsToAdd.length; i--;) {
-						filteredRow[fieldsToAdd[i]] = row[fieldsToAdd[i]];
-					}
-					result.push(filteredRow);
-					continue;
-				}
-				result.push(row);
-				break;
-			}
-			return result[0];
+		find: function (expr, fields, options) {
+			return Qstore.findIn(this.rows, expr, fields, options);
 		},
 
 		/**
-		 * checks for compliance with an item of expression
-		 * @param item
-		 * @param {Function|JSON} expr
-		 * @param {String} [flag='$eq']
-		 * @return {Boolean}
-		 * @example
-		 *  var apple = {type: 'apple', color: 'red'};
-		 *  var isRed = data.test(apple, {color: 'red'});
+		 * find rows
+		 * @param {Object|Function|Boolean} expr
+		 * @param {Array|Boolean} [fields=true]
+		 * @param {Object} [options]
+		 * @returns {Qstore}
 		 */
-		test: function (item, expr, flag) {
+		search: function (expr, fields, options) {
+			return new Qstore(this.find(expr, fields, options));
+		},
 
-			if (typeof(expr) != 'object' && typeof(expr) != 'function') {
-				flag = flag || '$eq';
-				switch (flag) {
-					case '$eq': return item == expr;
-					case '$ne': return item != expr;
-					case '$gt': return item > expr;
-					case '$lt': return item < expr;
-					case '$gte': return item >= expr;
-					case '$lte': return item <= expr;
-					case '$like': return item !== null ? ~String(item).toLowerCase().indexOf(expr) : false;
-					default: return false;
-				}
-			}
+		/**
+		 * find first row
+		 * @param {Object|Function|Boolean} expr
+		 * @param {Array|Boolean} [fields=true]
+		 * @param {Object} [options]
+		 * @returns {Object}
+		 */
+		findOne: function (expr, fields, options) {
+			options = options || {};
+			options = $.extend({}, {limit: 1}, options);
+			return this.find(expr, fields, options)[0]
+		},
 
-			if (flag == '$and') {
-				for (var key = 0; key < expr.length; key++) {
-					if (!this.test(item, expr[key])) return false;
-				}
-				return true;
-			}
+		/**
+		 * @param {String|Function|Array} indexes
+		 * @param {Object} [options]
+		 * @returns {Object}
+		 */
+		indexBy: function (indexes, options) {
+			return Qstore.indexBy(this.rows, indexes, options);
+		},
 
-			if (typeof(expr) == 'function') {
-				return expr(item);
-			}
+		mapOf: function (indexes, options) {
+			return Qstore.indexBy(this.rows, indexes, $.extend({}, {alwaysWrap: true}, options));
+		},
 
-			if (expr instanceof Array) {
-				//if (!expr.length) return true;
-				for (var key = 0; key < expr.length; key++) {
-					if (this.test(item, expr[key])) return true;
-				}
-				return false;
-			}
-
-			if (typeof(expr) == 'object') {
-				for (var key in expr) {
-
-					if (key == '$and') {
-						if (!this.test(item, expr[key], key)) return false;
-						continue;
-					}
-
-					if (typeof(key) == 'string' && key.charAt(0) == '$') {
-						if (!this.test(item, expr[key], key)) return false;
-						continue;
-					}
-
-					if (!this.test(item[key], expr[key])) return false;
-				}
-				return true;
-			}
-
-			return false;
+		/**
+		 * apply function for each element
+		 * @param [expr]
+		 * @param fn
+		 * @returns {Number} processed rows
+		 */
+		each: function (expr, fn) {
+			if (!fn) fn = expr;
+			var rows = this.find(expr, {goNext: fn});
+			return rows.length;
 		},
 
 		/**
@@ -316,7 +224,7 @@
 			var list = [];
 			var rows = expr ? this.find(expr) : this.rows;
 			for (var i = 0; i < rows.length; i++) {
-				var value = rows[i][key];
+				var value = Qstore.getVal(rows[i], key);
 				if (~$.inArray(value, list)) continue;
 				list.push(value);
 			}
@@ -324,12 +232,12 @@
 		},
 
 		/**
-			fire event
-			@eventName {Sting}
-			@data
-		*/
+		 fire event
+		 @eventName {Sting}
+		 @data
+		 */
 		fire: function (eventName, data) {
-			this.listener(eventName, data);
+			this.listener(eventName, data, this);
 		},
 
 		/**
@@ -345,6 +253,7 @@
 
 			if ($.isFunction(opt)) {
 				this.rows.sort(opt);
+				this.fire('sort', opt);
 				return;
 			}
 
@@ -414,6 +323,7 @@
 			} else {
 				this.rows.sort(fnAscSort);
 			}
+			this.fire('sort', opt);
 		},
 
 		/**
@@ -427,11 +337,12 @@
 			var expr = opt2 ? opt1 : null;
 			var values = opt2 ? opt2 : opt1;
 			var soft = typeof(opt2) == "boolean" ? opt2 : (typeof(opt3) == "boolean") ? opt3 : false;
+			soft = soft || this.softMode;
 			var cnt = 0;
 			var operationChanges = [];
 			for (var key = 0; key < this.rows.length; key++) {
 				var row = this.rows[key];
-				if (!expr || this.test(row, expr)) {
+				if (!expr || Qstore.test(row, expr)) {
 					var rowValues = $.isFunction(values) ? values(row) : values;
 					if (!rowValues) continue;
 					cnt++;
@@ -442,12 +353,13 @@
 					}
 					change.current = row;
 					if (!soft) {
-						operationChanges.push(change);
+						operationChanges.push($.extend({}, change, {patch: rowValues}));
 						this.changes[row.idx] = change;
 					}
 				}
 			}
 			this.compute();
+			operationChanges = new Qstore(operationChanges);
 			if (!soft) this.fire('change', {action: 'update', changes: operationChanges});
 			return cnt;
 		},
@@ -461,7 +373,7 @@
 		 */
 		patch: function (items, key, soft) {
 			key = key || 'idx';
-			soft = soft || false;
+			soft = soft || this.softMode;
 			if (!items) return 0;
 			var patchMap = {};
 			for (var i = 0; i < items.length; i++) {
@@ -480,26 +392,28 @@
 		 * @param {Array|Object} rows
 		 */
 		add: function (rows, soft) {
-			//TODO: сompute only added fields
 			rows = $.isArray(rows) ? rows : [rows];
-			rowsToAdd = [];
+			soft = soft || this.softMode;
+			var rowsToAdd = [];
+			var operationChanges = [];
 			for (var key = 0; key < rows.length; key++) {
 				var row = rows[key];
-				for (var fieldName in row) {
-					if (!~$.inArray(fieldName, this.columns)) {
-						// just remove field( instead of throwing exception )
-						delete row[key];
-					}
+
+				//set defaults
+				for (var fieldName in this.defaults) {
+					if (row[fieldName] === undefined) row[fieldName] = this.defaults[fieldName];
 				}
+
 				row.idx = ++this.lastIdx;
 				var change = {action: 'add', values: row};
 				if (!soft) this.changes[row.idx] = change;
+				operationChanges.push(change);
 				rowsToAdd.push(row);
 			}
 			this.rows = rowsToAdd.concat(this.rows);
 			this.compute();
 			this.sortFields = null;
-			this.fire('change', change);
+			this.fire('change', operationChanges);
 			return true;
 		},
 
@@ -512,13 +426,13 @@
 		 *  data.remove({type: 'apple', color: ['red', 'green']});
 		 */
 		remove: function (expr, soft) {
-			soft = soft || false;
+			soft = soft || this.softMode;
 			var operationChanges = [];
 			var cnt = 0;
 
 			for (i = 0; i < this.rows.length; i++) {
 				var row = this.rows[i];
-				if (this.test(row, expr)) {
+				if (Qstore.test(row, expr)) {
 					cnt++;
 					if (!soft) {
 						if (this.changes[row.idx]) {
@@ -534,6 +448,7 @@
 					i--;
 				}
 			}
+			operationChanges = new Qstore(operationChanges);
 			if (!soft) this.fire('change', {action: 'remove', changes: operationChanges});
 			return cnt;
 		},
@@ -542,8 +457,6 @@
 		 * rollback changes
 		 */
 		rollback: function () {
-			//TODO: rollback removed rows
-
 			for (var i = this.rows.length; i--;) {
 				var row = this.rows[i];
 				var change = this.changes[row.idx];
@@ -551,11 +464,17 @@
 				switch (change.action) {
 					case 'update':
 						this.rows[i] = change.source;
-					break;
+						break;
 					case 'add':
 						this.rows.splice(i, 1);
-					break;
+						break;
 				}
+			}
+
+			for (var idx in this.changes) {
+				var change = this.changes[idx];
+				if (change.action != 'remove') continue;
+				this.rows.push(change.source)
 			}
 
 			this.fire('change', {action: 'rollback', changes: $.extend({}, this.changes)});
@@ -576,21 +495,37 @@
 
 		/**
 		 * add new field
-		 * @param {Array} fields array of strings or objects like {name: 'fieldName', defaultValue: 0, compute: function(row) { return row.a + row.b}}
+		 * @param {Array|Object} fields array of strings or objects like {name: 'fieldName', default: 0, compute: function(row) { return row.a + row.b}}
 		 */
 		addFields: function (fields) {
+			if (!(fields instanceof Array)) fields = [fields];
 			var length = fields.length;
+			var newDefaults = [];
 			if (!length) return false;
 			for (var i = 0; i < length; i++) {
 				var field = $.extend({name: false, compute: false}, typeof(fields[i]) == 'string' ? {name: fields[i]} : fields[i]);
 				if (!field.name) continue;
+				var isNewColumn = false;
 				var columnExist = ~$.inArray(field.name, this.columns);
-				if (!columnExist) this.columns.push(field.name);
+				if (!columnExist) {
+					var isNewColumn = true;
+					this.columns.push(field.name);
+				}
 				if (field.compute) this.computed[field.name] = field.compute;
-				if (field.defaultValue != undefined) this.defaults[field.name] = field.defaultValue;
+				if (field.default != undefined) {
+					this.defaults[field.name] = field.default;
+					if (isNewColumn) newDefaults.push(field.name);
+				}
+			}
+			//set default values for new fields
+			if (newDefaults.length) for (var i = 0; i < this.rows.length; i++) {
+				var row = this.rows[i];
+				for (var j = 0; j < newDefaults.length; j++) {
+					var fieldName = newDefaults[j];
+					if (row[fieldName] === undefined) row[fieldName] = this.defaults[fieldName];
+				}
 			}
 			this.compute();
-			//this.fire('fieldsChange', {action: 'add', fields: fields});
 			this.fire('change', {action: 'addFields', fields: fields});
 			return true;
 		},
@@ -607,7 +542,6 @@
 						continue;
 					}
 					if (this.rows[i][fieldName] === undefined) this.rows[i][fieldName] = '';
-					if (this.defaults[fieldName] != undefined && this.rows[i][fieldName] == '') this.rows[i][fieldName] = this.defaults[fieldName];
 				}
 			}
 		},
@@ -615,40 +549,275 @@
 		/**
 		 * getCopy ([expr])
 		 * @param {Object|Function} [expr]
-		 * @returns {ActiveData}
+		 * @returns {Qstore}
 		 */
 		getCopy: function (expr) {
 			var rows = this.rows;
 			if (expr) rows = this.find(expr);
-			var copyData = new context.ActiveData(JSON.parse(JSON.stringify({columns: this.columns, rows: []})));
+			var copyData = new context.Qstore(JSON.parse(JSON.stringify({columns: this.columns, rows: []})));
 			copyData.rows = JSON.parse(JSON.stringify(rows));
 			copyData.lastIdx = this.lastIdx;
 			return copyData;
 		},
 
-		getKeys: function (obj) {
-			var result = [];
-			for (var key in obj) result.push(key);
-			return result;
+		removeFields: function (fields) {
+			if (!fields) return;
+			if (!(fields instanceof Array)) fields = [fields];
+
+			for (var i = 0; i < fields.length; i++) {
+				var fieldName = fields[i];
+				var fieldPos = this.columns.indexOf(fieldName);
+				if (~fieldPos) this.columns.splice(fieldPos, 1);
+				delete this.computed[fieldName];
+				delete this.defaults[fieldName];
+			}
+
+			for (var i = 0; i < this.rows.length; i++) {
+				for (var j = 0; j < fields.length; j++) {
+					var fieldName = fields[j];
+					delete this.rows[i][fieldName];
+				}
+			}
+			this.fire('change', {action: 'removeFields', fields: fields});
+		},
+
+		getChanges: function () {
+			if (this.changes.length) return null;
+			var changes = [];
+			for (var idx in this.changes) {
+				var change = this.changes[idx];
+				change.idx = idx;
+				changes.push(change);
+			}
+			return new Qstore(changes);
 		},
 
 		/**
-		 * @return {Number}
+		 *
+		 * @param {String} [keyField='idx']
 		 */
-		changesCnt: function () {
-			return app.utils.length(this.changes);
+		getChangesMap: function (keyField) {
+			keyField = keyField || 'idx';
+			var changes = this.getChanges();
+			var patch = {};
+			patch.add = changes.find({action: 'add'}, ['values:']);
+			patch.remove = changes.search({action: 'remove'}).getList('source.' + keyField);
+			patch.update = changes.find(true, ['source.' + keyField + ':' + keyField, 'values:']);
+			return patch;
 		},
 
-		removeField: function (fieldName) {
-			var fieldPos = $.inArray(fieldName, this.columns);
-			if (~fieldPos) {
-				this.columns.splice(fieldPos, 1);
-				for (var key = 0; key < this.rows.length; key++) {
-					delete this.rows[key][fieldName];
+		setListener: function (listener) {
+			this.listener = listener;
+		},
+
+		setSoftMode: function (state) {
+			this.softMode = state;
+		}
+
+	}, {
+		operators: {},
+		softMode: false,
+
+		addOperator: function (name, fn) {
+			Qstore.operators[name] = fn;
+		},
+
+		removeOperator: function (name) {
+			delete Qstore.operators[name];
+		},
+
+		/**
+		 * checks for compliance with an item of expression
+		 * @param item
+		 * @param {Function|JSON} expr
+		 * @param {String} [flag='$eq']
+		 * @return {Boolean}
+		 * @example
+		 *  var apple = {type: 'apple', color: 'red'};
+		 *  var isRed = data.test(apple, {color: 'red'});
+		 */
+		test: function (item, expr, flag, options) {
+
+			if (!options) options =  {item: item};
+
+			//simple values
+			if (typeof(expr) != 'object' && typeof(expr) != 'function') {
+				if (typeof expr == 'string' && expr.charAt(0) == '$') {
+					if (expr.charAt(1) == '.') {
+						var way = expr.substr(2);
+						expr = Qstore.getVal(options.item, way);
+					}
+				}
+				flag = flag || '$eq';
+				switch (flag) {
+					case '$eq': return item == expr;
+					case '$ne': return item != expr;
+					case '$gt': return item > expr;
+					case '$lt': return item < expr;
+					case '$gte': return item >= expr;
+					case '$lte': return item <= expr;
+					case '$like': return item !== null ? ~String(item).toLowerCase().indexOf(expr) : false;
+					default:
+						//search custom operator
+						var operator = flag.split('$')[1];
+						var fn = Qstore.operators[operator];
+						if (!fn) throw 'operator ' + operator + ' not found';
+						return fn(item, expr);
 				}
 			}
-			this.fire('fieldsChange', {action: 'removeField', fields: [fieldName]});
-		}
+
+			if (flag == '$and') {
+				for (var key = 0; key < expr.length; key++) {
+					if (!this.test(item, expr[key], null, options)) return false;
+				}
+				return true;
+			}
+
+			// regular expressions
+			if (expr instanceof RegExp) {
+				return expr.test(String(item));
+			}
+
+			// "or" condtions
+			if (expr instanceof Array) {
+				for (var key = 0; key < expr.length; key++) {
+					if (this.test(item, expr[key]), null, options) return true;
+				}
+				return false;
+			}
+
+			// "and" conditions
+			if (typeof(expr) == 'object') {
+				for (var key in expr) {
+
+					if (key == '$and') {
+						if (!this.test(item, expr[key], key, options)) return false;
+						continue;
+					}
+
+					if (typeof(key) == 'string' && key.charAt(0) == '$') {
+						if (!this.test(item, expr[key], key, options)) return false;
+						continue;
+					}
+
+					if (typeof item != 'object') return false;
+
+					if (!this.test(Qstore.getVal(item, key), expr[key], null, options)) return false;
+				}
+				return true;
+			}
+
+			// function condition
+			if (typeof expr == 'function') {
+				return expr(item);
+			}
+
+			return false;
+		},
+
+		/**
+		 * find rows in array
+		 * findIn([data, selector [,fields=true] [,options]);
+		 */
+		findIn: function (data, expr, fields, options) {
+			if (!data) throw 'empty data';
+			if (!expr) return [];
+
+			// swap arguments
+			if (!$.isArray(fields) && typeof fields != 'boolean') {
+				options = fields;
+				fields = null;
+			}
+			fields = fields || true;
+			options = options || {};
+
+			var limit = options.limit;
+			var goNext = options.goNext;
+
+			if (typeof limit == 'number') {
+				limit = [1, limit];
+			}
+
+			var result = [];
+			var counter = 0;
+			for (var key = 0; key < data.length; key++) {
+				var row = data[key];
+				if (limit && counter >= limit[1]) break;
+				if (expr !== true && !Qstore.test(row, expr)) continue;
+				counter++;
+				if (goNext && goNext(row, counter, expr) === false) break;
+				if (limit && counter < limit[0]) continue;
+				if (fields && $.isArray(fields)) {
+					var filteredRow = {};
+					for (var i = fields.length; i--;) {
+						var fieldDef = fields[i].split(':');
+						var alias = fieldDef[1] ? fieldDef[1] : fieldDef[0];
+						var value = Qstore.getVal(row, fieldDef[0]);
+
+						if (fieldDef[1] === '' && typeof value == 'object') {
+							for (var fieldName in value) {
+								filteredRow[fieldName] = value[fieldName];
+							}
+						} else {
+							filteredRow[alias] = value;
+						}
+					}
+					result.push(filteredRow);
+					continue;
+				}
+				result.push(row);
+			}
+			return result;
+		},
+
+		indexBy: function (data, indexes, options) {
+			options = $.extend({}, {alwaysWrap: false, undefinedKey: false}, options)
+			var result = {};
+			if (!(indexes instanceof Array)) indexes = [indexes];
+			var index = indexes[0];
+			for (var i = 0; i < data.length; i++) {
+				var row = data[i];
+				var indexValue = (typeof index == 'function') ? index(row) : Qstore.getVal(row, index);
+				if (indexValue == undefined) {
+					if (!options.undefinedKey) continue;
+					indexValue = options.undefinedKey;
+				}
+				if (options.alwaysWrap) {
+					if (!result[indexValue]) result[indexValue] = [];
+					result[indexValue].push(row);
+				} else {
+					if (!result[indexValue]) result[indexValue] = row;
+					else if (result[indexValue] instanceof Array) result[indexValue].push(row)
+					else result[indexValue] = [result[indexValue], row];
+				}
+			}
+			var nextIndexes = indexes.splice(1);
+			if (nextIndexes.length) for (var key in result) {
+				var rows = (result[key] instanceof Array) ? result[key] : [result[key]];
+				result[key] = Qstore.indexBy(rows, nextIndexes, options);
+			}
+			return result;
+		},
+
+		getVal: function (item, key) {
+			var way = key.split('.');
+			var curVal = item;
+			for (var i = 0; i < way.length; i++) {
+				if (typeof  curVal != 'object') return undefined;
+				curVal = curVal[way[i]];
+			}
+			return curVal;
+		},
+
+		/**
+		 *
+		 * @param {Boolean} state
+		 */
+		setSoftMode: function (state) {
+			this.softMode = state;
+		},
+
+		Class: Class
 	});
-	
+
 })(window);
