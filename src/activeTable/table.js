@@ -1,5 +1,5 @@
 /**
- * v0.2.0
+ * v0.2.1
  * Available via the MIT license.
  * see: http://github.com/holiber/activetable
  */
