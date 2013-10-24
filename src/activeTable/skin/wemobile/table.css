@@ -119,7 +119,12 @@
 
 .data-table th > .column-wrap,
 .data-table th > .foot-wrap
-{display: table-cell;vertical-align: middle;padding:0 1em; box-sizing: border-box}
+{vertical-align: middle;padding:0 1em; box-sizing: border-box}
+
+.active-table.has-vscroll .data-table th > .column-wrap,
+.active-table.has-vscroll .data-table th > .foot-wrap {
+	display: table-cell;
+}
 
 .data-table th:last-child > .column-wrap,
 .data-table th:last-child > .foot-wrap
