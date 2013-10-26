@@ -1,5 +1,5 @@
 /**
- * v0.2.2
+ * v0.3.0
  * Available via the MIT license.
  * see: http://github.com/holiber/activetable
  */
@@ -151,8 +151,8 @@
 
 	var tableUtils = {
 		/**
-		* @return {Number} object fields count
-		*/
+		 * @return {Number} object fields count
+		 */
 		length: function (obj) {
 			var cnt = 0;
 			if ($.isArray(obj)) return obj.length;
@@ -161,20 +161,20 @@
 		},
 
 		/**
-		* convert camelCase string to under_score
-		* @param {String} str
-		* @return {String}
-		*/
+		 * convert camelCase string to under_score
+		 * @param {String} str
+		 * @return {String}
+		 */
 		toUnderscore: function (str) {
 			if (!str) return '';
 			return str.replace(/([A-Z])/g, function (str, p1) { return '_' + p1.toLowerCase()});
 		},
 
 		/**
-		* convert camelCase string to -score
-		* @param {String} str
-		* @return {String}
-		*/
+		 * convert camelCase string to -score
+		 * @param {String} str
+		 * @return {String}
+		 */
 		toScore: function (str) {
 			if (!str) return '';
 			str = str.replace(/([A-Z])/g, function (str, p1, offset) { return (offset != 0 ? '-' : '') + p1.toLowerCase()});
@@ -202,10 +202,10 @@
 		},
 
 		/**
-		* converts date to "dd.mm.yyyy" format
-		* @param {Date|Number} date
-		* @return string
-		**/
+		 * converts date to "dd.mm.yyyy" format
+		 * @param {Date|Number} date
+		 * @return string
+		 **/
 		dateToSting: function (date) {
 			if (!date) return '';
 			if (!(date instanceof Date)) date = new Date(date);
@@ -217,16 +217,16 @@
 			return (dd + '.' + mm + '.' + yyyy);
 		}
 	};
-	
+
 	/**
 	 * Widget class
 	 * @abstract
 	 */
 	var Widget = Class.extend({
-	
+
 		init: function (table, params) {
 			this.table = table;
-			this.target = null;//render place
+			this.container = null;
 			this.name = (params && params.name) || tableUtils.tocamelCase(this.componentName);
 			this.el = null;
 			this.enabled = true;
@@ -276,16 +276,14 @@
 				case 'disable': this.disable(); break;
 				case 'enable': this.enable(); break;
 			}
-		},
-		
-		_static: {
-			installTemplate: function (templates) {
-				this.prototype.tpl = templates;
-			}
 		}
 
+	}, {
+		installTemplate: function (templates) {
+			this.prototype.tpl = templates;
+		}
 	});
-	
+
 
 	/**
 	 * ActiveTable class
@@ -295,1425 +293,1427 @@
 	 */
 	var ActiveTable = context.ActiveTable = Class.extend({
 
-		defaultTemplates: null,
-		utils: tableUtils,
+			defaultTemplates: null,
+			utils: tableUtils,
 
-		init: function (options) {
-			this.el = null; //container
-			this.layout = null; //container for drawing in document fragment
-			this.jqWidgets = null; //widgets container
-			this.templates = null; //a set of templates
-			this.name = null; //table name, used to store some table options in cookies
-			this.data = null; //instanse of Qstore
-			this.visibleFields = []; //store list of all visible fields
-			this.showOnlyDescribed = false; //show only fields described in "order" and "fields"
-			this.fields = null; //store all table fields
-			this.perPage = null; //how many records will be displayed on one page
-			this.fixedRowsCnt = false;//always show fixed rows count specified in "perPage"
-			this.page = 1; //store current page
-			this.sort = null; //store stort array
-			this.defaultSort = false; //3rd sorting state
-			this.filters = {defaultFilter: null}; //store all applied table filters
-			this.computedFilter = null; //computed filter based on all applied filters
-			this.rowsCnt = null; //the number of visible fields based filtering
-			this.widgets = null; //store all widgets instanses
-			this.widgetsOrder = null;//store widgets order
-			this.selection = []; //array of indexes of selected elements
-			this._checkAll = false; //true when all elements are selected
-			this.on = null; //external event handlers
-			this.canSelectText = true; //use enableTextSelection() and disableTextSelection() to change this option
-			this.cssClasses = [] //contains custom css-classes for table
-			this.scrollParams = {
-				vertical: false,
-				horizontal: false,
-				vPos: 0,
-				hPos: 0,
-				vAcceleration: null,
-				hAcceleration: null,
-				overflowHeight: 0,
-				layerHeight: 0,
-				overflowWidth: 0,
-				layerWidth: 0,
-				autoSizing: true,
-				isVscrolling: false,
-				isHscrolling: false,
-				vBarOffsetY: 0,
-				hBarOffsetX: 0,
-				hScrollActive: false,
-				vScrollActive: false
-			};
-			this.locked = false;
-			this.enabled = true;
-			this.clientX = null;
-			this.clientY = null;
-			this.lastCheckedIdx = null;
-			this.resizeThrottle = 0;
-			this.resizeTimeoutId = null;
-			this._setOptions(options);
-		},
-
-		_setOptions: function (options) {
-			options = options || {};
-			this.params = this.params || {};
-			this.params = $.extend(true, {}, DEFAULT_OPTIONS, this.params, options);
-			this.fields = {};
-			this.fieldsDefaults = this.params.fieldsDefaults;
-			this.hiddenFields = this.params.hiddenFields;
-			this.order = this.params.order;
-			this.name = this.params.name;
-			this.defaultSort = this.params.defaultSort;
-			this.selectable = this.params.selectable;
-			this.fixedRowsCnt = this.params.fixedRowsCnt;
-			this.perPage = this.params.perPage;
-			this.on = this.params.on;
-			this.sort = this.params.sort;
-			this.helper = this.params.helper;
-			this.hasFooter = this.params.hasFooter;
-			this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
-			this.showOnlyDescribed = this.params.showOnlyDescribed;
-			this.resizeThrottle = this.params.resizeThrottle;
-			this.el = this.params.el;
-			this.scrollParams = $.extend({}, DEFAULT_OPTIONS.scrollParams, this.params.scrollParams);
-
-			this.setData(this.params.data);
-			this.setFields(this.params.fields);
-			this.setTemplates(this.params.templates);
-
-			this.rowsCnt = this.data.size();
-			if (this.params.sort || this.sort) this.data.sort(this.params.sort || this.sort);
-
-			//init widgets
-			this.widgets = {};
-			for (var key in this.params.widgets) {
-				var params = this.params.widgets[key];
-				var widget = null;
-				if (typeof(params) == 'string') {
-					params = this.params.widgets[key] = {widget: params};
-				}
-				
-				//if default widget exist
-				if (ActiveTable.widgetsSet[params.widget]) {
-					var Widget = ActiveTable.widgetsSet[params.widget];
-					widget = new Widget(this, params.params);
-				} else if ($.isFunction(params)){
-					widget = new params(this);
-				} else {
-					throw 'widget ' + params.widget +' not found';
-				}
-
-				//attach events
-				widget.on = {
-					filter: this._onFilterHandler.bind(this),
-					perPage: this._onPerPageHandler.bind(this),
-					clearSelection: this._onClearSelectionHandler.bind(this),
-					commit: this._onCommitHandler.bind(this),
-					rollback: this._onRollbackHandler.bind(this)
+			init: function (options) {
+				this.el = null; //container
+				this.layout = null; //container for drawing in document fragment
+				this.jqWidgets = null; //widgets container
+				this.templates = null; //a set of templates
+				this.name = null; //table name, used to store some table options in cookies
+				this.data = null; //instanse of Qstore
+				this.visibleFields = []; //store list of all visible fields
+				this.showOnlyDescribed = false; //show only fields described in "order" and "fields"
+				this.fields = null; //store all table fields
+				this.perPage = null; //how many records will be displayed on one page
+				this.fixedRowsCnt = false;//always show fixed rows count specified in "perPage"
+				this.page = 1; //store current page
+				this.sort = null; //store stort array
+				this.defaultSort = false; //3rd sorting state
+				this.filters = {defaultFilter: null}; //store all applied table filters
+				this.computedFilter = null; //computed filter based on all applied filters
+				this.rowsCnt = null; //the number of visible fields based filtering
+				this.widgets = null; //store all widgets instanses
+				this.widgetsOrder = null;//store widgets order
+				this.selection = []; //array of indexes of selected elements
+				this._checkAll = false; //true when all elements are selected
+				this.on = null; //external event handlers
+				this.canSelectText = true; //use enableTextSelection() and disableTextSelection() to change this option
+				this.cssClasses = [] //contains custom css-classes for table
+				this.scrollParams = {
+					vertical: false,
+					horizontal: false,
+					vPos: 0,
+					hPos: 0,
+					vAcceleration: null,
+					hAcceleration: null,
+					overflowHeight: 0,
+					layerHeight: 0,
+					overflowWidth: 0,
+					layerWidth: 0,
+					autoSizing: true,
+					isVscrolling: false,
+					isHscrolling: false,
+					vBarOffsetY: 0,
+					hBarOffsetX: 0,
+					hScrollActive: false,
+					vScrollActive: false
 				};
-				this.widgets[params.widget] = widget;
-			
-			}
-			for (var widgetName in this.widgets) {
-				this.widgets[widgetName]._receive('ready');
-			}
-		},
+				this.locked = false;
+				this.enabled = true;
+				this.clientX = null;
+				this.clientY = null;
+				this.lastCheckedIdx = null;
+				this.resizeThrottle = 0;
+				this.resizeTimeoutId = null;
+				this._setOptions(options);
+			},
 
-		/**
-		 * use this method for change initial options
-		 */
-		setOptions: function (options) {
-			if (options.data) {
-				this.setData(options.data);
-				this._onDataChangeHandler();
-			}
-			if (options.el) {
-				this.layout = null;
-				this.el = options.el;
-			}
+			_setOptions: function (options) {
+				options = options || {};
+				this.params = this.params || {};
+				this.params = $.extend(true, {}, DEFAULT_OPTIONS, this.params, options);
+				this.fields = {};
+				this.fieldsDefaults = this.params.fieldsDefaults;
+				this.hiddenFields = this.params.hiddenFields;
+				this.order = this.params.order;
+				this.name = this.params.name;
+				this.defaultSort = this.params.defaultSort;
+				this.selectable = this.params.selectable;
+				this.fixedRowsCnt = this.params.fixedRowsCnt;
+				this.perPage = this.params.perPage;
+				this.on = this.params.on;
+				this.sort = this.params.sort;
+				this.helper = this.params.helper;
+				this.hasFooter = this.params.hasFooter;
+				this.widgetsOrder = options.widgetsOrder || this.widgetsOrder || this.params.widgetsOrder;
+				this.showOnlyDescribed = this.params.showOnlyDescribed;
+				this.resizeThrottle = this.params.resizeThrottle;
+				this.el = this.params.el;
+				this.scrollParams = $.extend({}, DEFAULT_OPTIONS.scrollParams, this.params.scrollParams);
 
-			if (options.selectable !== undefined) this.selectable = options.selectable;
-			if (options.helper) this.helper = options.helper;
-			if (options.on) this.on = options.on;
-			if (options.sort) this.sort = options.sort;
-			if (options.hasFooter) this.hasFooter = options.hasFooter;
-			if (options.templates) this.setTemplates(options.templates);
-			if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
-			if (options.order) this.order = options.order;
-			if (options.hiddenFields) this.hiddenFields = options.hiddenFields;
-			if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || options.data || (!options.data && this.showOnlyDescribed)) {
-				this.setFields(options.fields);
-			}
-			if (options.data || options.sort) {
-				this.data.sort(this.sort);
-			}
-			this.emit('setOptions')
-		},
+				this.setData(this.params.data);
+				this.setFields(this.params.fields);
+				this.setTemplates(this.params.templates);
 
-		setData: function (data) {
-			this.data = (data instanceof Qstore) ? (data || {columns: [], rows: []}): new Qstore(data);
-			this.data.listener = $.proxy(this._dataListener, this);
-		},
+				this.rowsCnt = this.data.size();
+				if (this.params.sort || this.sort) this.data.sort(this.params.sort || this.sort);
 
-		setTemplates: function (templates) {
-			if ($.isFunction(templates)) {
-				templates = {columns: templates, cells: templates, feet: templates, master: templates};
-			}
-			this.templates = $.extend(true, {}, this.defaultTemplates, templates);
-		},
-
-		setFields: function (fields) {
-			fields = fields || this.fields;
-			var additionalFields = [];
-
-			//set described fields
-			for (var fieldName in fields) {
-				var field = fields[fieldName];
-				if (!$.isPlainObject(field)) field = {title: field};
-				field = $.extend(true, {}, this.fieldsDefaults, field);
-				field.name = fieldName;
-				if (field.compute || fields[fieldName]) additionalFields.push(field);
-				this.fields[fieldName] = field;
-			}
-
-			//set undescribed fields
-			if (this.data) {
-				for (var key in this.data.columns) {
-					var fieldName = this.data.columns[key];
-					if (!this.fields[fieldName]) {
-						this.fields[fieldName] = $.extend({}, this.params.fieldsDefaults);
+				//init widgets
+				this.widgets = {};
+				for (var key in this.params.widgets) {
+					var params = this.params.widgets[key];
+					var widget = null;
+					if (typeof(params) == 'string') {
+						params = this.params.widgets[key] = {widget: params};
 					}
+					params = $.extend({container: null, widget: null, name: null, params: null}, params);
+					// if widget already installed
+					if (ActiveTable.widgetsSet[params.widget]) {
+						var Widget = ActiveTable.widgetsSet[params.widget];
+						widget = new Widget(this, params.params);
+						if (params.container) widget.container = params.container;
+						if (params.name) widget.name = params.name;
+					} else if ($.isFunction(params)){
+						widget = new params(this);
+					} else {
+						throw 'widget ' + params.widget +' not found';
+					}
+
+					//attach events
+					widget.on = {
+						filter: this._onFilterHandler.bind(this),
+						perPage: this._onPerPageHandler.bind(this),
+						clearSelection: this._onClearSelectionHandler.bind(this),
+						commit: this._onCommitHandler.bind(this),
+						rollback: this._onRollbackHandler.bind(this)
+					};
+					this.widgets[params.widget] = widget;
+
 				}
-			}
-
-			//collect visible fields
-			this.visibleFields = this.order.length ? [].concat(this.order) : [].concat(this.data.columns);
-			for (var i = this.visibleFields.length; i--;) {
-				var fieldName = this.visibleFields[i];
-				if (!this.fields[fieldName]) throw ('field "' + fieldName + '" not found');
-				if (~$.inArray(fieldName, this.hiddenFields)) {
-					this.visibleFields.splice(i, 1);
-					continue;
+				for (var widgetName in this.widgets) {
+					this.widgets[widgetName]._receive('ready');
 				}
-				if (!fields[fieldName] && this.showOnlyDescribed && (!~$.inArray(fieldName, this.order))) this.visibleFields.splice(i, 1);
-			}
+			},
 
-			if (!this.showOnlyDescribed) {
-				for (var i = 0; i < this.data.columns.length; i++) {
-					var column = this.data.columns[i];
-					if (~$.inArray(column, this.visibleFields)) continue;
-					if (!~$.inArray(column, this.hiddenFields)) this.visibleFields.push(column);
+			/**
+			 * use this method for change initial options
+			 */
+			setOptions: function (options) {
+				if (options.data) {
+					this.setData(options.data);
+					this._onDataChangeHandler();
 				}
-			}
+				if (options.el) {
+					this.layout = null;
+					this.el = options.el;
+				}
 
-			this.data.addFields(additionalFields);
-		},
-		
-		
-		/**
-		 * render table
-		 * @param {jQueryObject|String} [el] container or selector of area
-		 * WARNING! method does not guarantee that all widgets will be rendered
-		 * @see renderWidgets
-		 */
-		render: function (el) {
-			var selector = null;
-			if (typeof(el) == 'string') {
-				if (!this.layout) return false;
-				selector = el;
-				el = null;
-			}
+				if (options.selectable !== undefined) this.selectable = options.selectable;
+				if (options.helper) this.helper = options.helper;
+				if (options.on) this.on = options.on;
+				if (options.sort) this.sort = options.sort;
+				if (options.hasFooter) this.hasFooter = options.hasFooter;
+				if (options.templates) this.setTemplates(options.templates);
+				if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
+				if (options.order) this.order = options.order;
+				if (options.hiddenFields) this.hiddenFields = options.hiddenFields;
+				if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || options.data || (!options.data && this.showOnlyDescribed)) {
+					this.setFields(options.fields);
+				}
+				if (options.data || options.sort) {
+					this.data.sort(this.sort);
+				}
+				this.emit('setOptions')
+			},
 
-			if (el && el.length) this.el = el;
-			if (!selector && (!this.el || !this.el.length)) return;
+			setData: function (data) {
+				this.data = (data instanceof Qstore) ? (data || {columns: [], rows: []}): new Qstore(data);
+				this.data.listener = $.proxy(this._dataListener, this);
+			},
 
-			if (!this.templates.layout) {
-				throw('templates are not installed');
-				return;
-			}
+			setTemplates: function (templates) {
+				if ($.isFunction(templates)) {
+					templates = {columns: templates, cells: templates, feet: templates, master: templates};
+				}
+				this.templates = $.extend(true, {}, this.defaultTemplates, templates);
+			},
 
-			var firstTimeRendering = (el && el.length) || !(this.layout);
+			setFields: function (fields) {
+				fields = fields || this.fields;
+				var additionalFields = [];
 
-			if (!selector) {
-				this.layout = $(this.templates.renderer(this));
+				//set described fields
+				for (var fieldName in fields) {
+					var field = fields[fieldName];
+					if (!$.isPlainObject(field)) field = {title: field};
+					field = $.extend(true, {}, this.fieldsDefaults, field);
+					field.name = fieldName;
+					if (field.compute || fields[fieldName]) additionalFields.push(field);
+					this.fields[fieldName] = field;
+				}
 
-				//widgets
-				if (firstTimeRendering || !this.enabled) {
-					this.renderWidgets();
-				} else {
-					this.layout.find('.widgets').append(this.jqWidgets);
-					for (var widgetName in this.widgets) {
-						var widget = this.widgets[widgetName];
-						if (widget.target) {
-							if (widget.el) this.layout.find(widget.target).replaceWith(widget.el);
-							else widget.render(this.layout.find(widget.target));
+				//set undescribed fields
+				if (this.data) {
+					for (var key in this.data.columns) {
+						var fieldName = this.data.columns[key];
+						if (!this.fields[fieldName]) {
+							this.fields[fieldName] = $.extend({}, this.params.fieldsDefaults);
 						}
 					}
 				}
 
-
-				if (firstTimeRendering || !this.enabled) {
-					this._attachEvents();
-					this.enabled = true;
+				//collect visible fields
+				this.visibleFields = this.order.length ? [].concat(this.order) : [].concat(this.data.columns);
+				for (var i = this.visibleFields.length; i--;) {
+					var fieldName = this.visibleFields[i];
+					if (!this.fields[fieldName]) throw ('field "' + fieldName + '" not found');
+					if (~$.inArray(fieldName, this.hiddenFields)) {
+						this.visibleFields.splice(i, 1);
+						continue;
+					}
+					if (!fields[fieldName] && this.showOnlyDescribed && (!~$.inArray(fieldName, this.order))) this.visibleFields.splice(i, 1);
 				}
 
-				this.el.html(this.layout);
-
-			} else {
-				var $part = $(this.templates.renderer(this)).find(selector);
-				this.layout.find(selector).replaceWith($part);
-			}
-
-
-			this._renderChecked();
-
-			if (this.scrollParams.vertical) {
-
-				if (!jQuery.fn.mousewheel) {
-					throw ('you need to jquery.mousewheel plugin for use scroll. You can find it in "optional" folder.');
-					return false;
+				if (!this.showOnlyDescribed) {
+					for (var i = 0; i < this.data.columns.length; i++) {
+						var column = this.data.columns[i];
+						if (~$.inArray(column, this.visibleFields)) continue;
+						if (!~$.inArray(column, this.hiddenFields)) this.visibleFields.push(column);
+					}
 				}
 
-				this.resize();
+				this.data.addFields(additionalFields);
+			},
 
-			}
 
-			//fix column width
-			for (var fieldName in this.fields) {
-				var field = this.fields[fieldName];
-				if (field.fixedWidth) {
-					var jqColumn = this.el.find('tr .col-' + fieldName);
-					if (!field.width) field.width = jqColumn.width();
-					jqColumn.width(field.width);
+			/**
+			 * render table
+			 * @param {jQueryObject|String} [el] container or selector of area
+			 * WARNING! method does not guarantee that all widgets will be rendered
+			 * @see renderWidgets
+			 */
+			render: function (el) {
+				var selector = null;
+				if (typeof(el) == 'string') {
+					if (!this.layout) return false;
+					selector = el;
+					el = null;
 				}
-			}
-			this.emit('render', selector);
-		},
 
-		/**
-		 *  resize table in scroll mode
-		 *  @param {Boolean} [throttle=false]
-		 */
-		resize: function (throttle) {
+				if (el && el.length) this.el = el;
+				if (!selector && (!this.el || !this.el.length)) return;
 
-			throttle = typeof(throttle) == 'boolean' || false;
+				if (!this.templates.layout) {
+					throw('templates are not installed');
+					return;
+				}
 
+				var firstTimeRendering = (el && el.length) || !(this.layout);
 
-			if (throttle && this.resizeTimeoutId) {
-				this.el.parent().css({overflow: 'hidden'});
-				this.layout.width(this.layout.width());
-				clearTimeout(this.resizeTimeoutId);
-				this.resizeTimeoutId = setTimeout(this.resize.bind(this), this.resizeThrottle);
-				return;
-			}
+				if (!selector) {
+					this.layout = $(this.templates.renderer(this));
 
-			if (throttle) {
-				this.resizeTimeoutId = -1;
-			} else {
-				this.resizeTimeoutId = null;
-				this.layout.css({width: 'auto'});
-				this.el.parent().css({overflow: 'visible'});
-			}
+					this.renderWidgets();
 
-			//resize table header and footer
-			if (this.scrollParams.autoSizing) {
-				var jqThead = this.el.find('.data-table > thead').hide();
-				var widths = [];
-				var jqThs = jqThead.find('tr:first > th > .column-wrap');
-				if (!this.rowsCnt) {
-					jqThs.css({display: 'table-cell'});
+					if (firstTimeRendering || !this.enabled) {
+						this._attachEvents();
+						this.enabled = true;
+					}
+
+					this.el.html(this.layout);
+
 				} else {
-					jqThs.css({display: 'inline-block'});
-					this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
-						widths.push($(this).outerWidth());
-					});
+					var $part = $(this.templates.renderer(this)).find(selector);
+					this.layout.find(selector).replaceWith($part);
+				}
 
-					var i = 0;
-					var lastLeftPos = 0;
-					jqThs.each(function () {
-						$(this).outerWidth(widths[i]);
-						lastLeftPos += widths[i];
-						i++;
-					});
+
+				this._renderChecked();
+
+				if (this.scrollParams.vertical) {
+
+					if (!jQuery.fn.mousewheel) {
+						throw ('you need to jquery.mousewheel plugin for use scroll. You can find it in "optional" folder.');
+						return false;
+					}
+
+					this.resize();
 
 				}
 
-				lastLeftPos = 0;
-				if (this.hasFooter) {
-					var jqTfoot = this.el.find('.data-table > tfoot:first').hide();
-					var jqFeet = jqTfoot.find('tr:first > td > .foot-wrap');
-					if (!this.rowsCnt) {
+				//fix column width
+				for (var fieldName in this.fields) {
+					var field = this.fields[fieldName];
+					if (field.fixedWidth) {
+						var jqColumn = this.el.find('tr .col-' + fieldName);
+						if (!field.width) field.width = jqColumn.width();
+						jqColumn.width(field.width);
+					}
+				}
+				this.emit('render', selector);
+			},
 
-						i = 0;
-						jqFeet.each(function () {
+			/**
+			 *  resize table in scroll mode
+			 *  @param {Boolean} [throttle=false]
+			 */
+			resize: function (throttle) {
+
+				throttle = typeof(throttle) == 'boolean' || false;
+
+
+				if (throttle && this.resizeTimeoutId) {
+					this.el.parent().css({overflow: 'hidden'});
+					this.layout.width(this.layout.width());
+					clearTimeout(this.resizeTimeoutId);
+					this.resizeTimeoutId = setTimeout(this.resize.bind(this), this.resizeThrottle);
+					return;
+				}
+
+				if (throttle) {
+					this.resizeTimeoutId = -1;
+				} else {
+					this.resizeTimeoutId = null;
+					this.layout.css({width: 'auto'});
+					this.el.parent().css({overflow: 'visible'});
+				}
+
+				//resize table header and footer
+				if (this.scrollParams.autoSizing) {
+					var jqThead = this.el.find('.data-table > thead').hide();
+					var widths = [];
+					var jqThs = jqThead.find('tr:first > th > .column-wrap');
+					if (!this.rowsCnt) {
+						jqThs.css({display: 'table-cell'});
+					} else {
+						jqThs.css({display: 'inline-block'});
+						this.el.find('.data-table .vscroll-layer > tbody > tr:first td').each(function () {
+							widths.push($(this).outerWidth());
+						});
+
+						var i = 0;
+						var lastLeftPos = 0;
+						jqThs.each(function () {
 							$(this).outerWidth(widths[i]);
 							lastLeftPos += widths[i];
 							i++;
 						});
+
 					}
-					jqTfoot.show();
+
+					lastLeftPos = 0;
+					if (this.hasFooter) {
+						var jqTfoot = this.el.find('.data-table > tfoot:first').hide();
+						var jqFeet = jqTfoot.find('tr:first > td > .foot-wrap');
+						if (!this.rowsCnt) {
+
+							i = 0;
+							jqFeet.each(function () {
+								$(this).outerWidth(widths[i]);
+								lastLeftPos += widths[i];
+								i++;
+							});
+						}
+						jqTfoot.show();
+					}
+
+					jqThead.show();
 				}
 
-				jqThead.show();
-			}
+				if (this.scrollParams.horizontal) {
+					var jqHOverflow = this.el.find('.hscroll-overflow');
+					jqHOverflow.css({height: 'auto'});
+					var height = this.el.height();
+					var wrapHeight = this.el.find('.table-wrap').outerHeight();
+					var freeHeight = height - wrapHeight;
+					jqHOverflow.height(jqHOverflow.height() + freeHeight);
+					this.scrollParams.overflowWidth = jqHOverflow.width();
+					this.scrollParams.layerWidth = this.el.find('.hscroll-layer').width();
 
-			if (this.scrollParams.horizontal) {
-				var jqHOverflow = this.el.find('.hscroll-overflow');
-				jqHOverflow.css({height: 'auto'});
-				var height = this.el.height();
-				var wrapHeight = this.el.find('.table-wrap').outerHeight();
-				var freeHeight = height - wrapHeight;
-				jqHOverflow.height(jqHOverflow.height() + freeHeight);
-				this.scrollParams.overflowWidth = jqHOverflow.width();
-				this.scrollParams.layerWidth = this.el.find('.hscroll-layer').width();
+					var jqVOverflow = this.el.find('.vscroll-overflow');
+					jqVOverflow.css({height: 'auto'});
+					jqVOverflow.height(this.el.find('.vscroll-overflow-td').parent().height());
 
-				var jqVOverflow = this.el.find('.vscroll-overflow');
-				jqVOverflow.css({height: 'auto'});
-				jqVOverflow.height(this.el.find('.vscroll-overflow-td').parent().height());
+					//firefox table fix
+					var theadHeight = jqHOverflow.find('thead:first').outerHeight();
+					var tfootHeight = jqHOverflow.find('tfoot:first').outerHeight() || 0;
+					var freeTableHeight = jqHOverflow.height() - theadHeight - tfootHeight;
+					jqVOverflow.height(freeTableHeight);
+					this.el.find('.vscroll-overflow-td').height(freeTableHeight);
 
-				//firefox table fix
-				var theadHeight = jqHOverflow.find('thead:first').outerHeight();
-				var tfootHeight = jqHOverflow.find('tfoot:first').outerHeight() || 0;
-				var freeTableHeight = jqHOverflow.height() - theadHeight - tfootHeight;
-				jqVOverflow.height(freeTableHeight);
-				this.el.find('.vscroll-overflow-td').height(freeTableHeight);
+				} else if (this.scrollParams.vertical) {
 
-			} else if (this.scrollParams.vertical) {
+					var jqVOverflow = this.el.find('.vscroll-overflow');
+					jqVOverflow.css({height: 'auto'});
+					var height = this.el.height();
+					var wrapHeight = this.el.find('.table-wrap').outerHeight();
+					var freeHeight = height - wrapHeight;
+					jqVOverflow.height(jqVOverflow.height() + freeHeight);
 
-				var jqVOverflow = this.el.find('.vscroll-overflow');
-				jqVOverflow.css({height: 'auto'});
-				var height = this.el.height();
-				var wrapHeight = this.el.find('.table-wrap').outerHeight();
-				var freeHeight = height - wrapHeight;
-				jqVOverflow.height(jqVOverflow.height() + freeHeight);
-
-				var jqHscrollLayer = this.el.find('.hscroll-layer');
-				this.el.find('.hscroll-overflow').css({height: 'auto'});
-				if (this.scrollParams.horizontal) this.el.find('.hscroll-overflow').height(jqHscrollLayer.height());
-			}
-
-			this.scrollParams.overflowWidth = this.el.find('.hscroll-overflow').width();
-			this.scrollParams.layerWidth = this.el.find('.hscroll-layer').outerWidth();
-			this.scrollParams.overflowHeight = jqVOverflow.height();
-			this.scrollParams.layerHeight = this.el.find('.vscroll-layer').height();
-
-			this.scrollTo(this.scrollParams.vPos, this.scrollParams.hPos);
-			this.emit('resize');
-		},
-
-		disable: function () {
-			this.enabled = false;
-			this.el && this.el.off('.table');
-			this.emit('disable');
-		},
-
-		enable: function () {
-			this.enabled = false;
-			this._attachEvents();
-			this.emit('enable');
-		},
-
-		/**
-		 * apply function for each displayed row
-		 * forEach ([selector,] fn)
-		 * @param {Object|Function} opt1
-		 * @param {Function} [opt2]
-		 * @return {Number} processed rows count
-		 */
-		forEach: function (opt1, opt2) {
-			var fn = opt2 ? opt2 : opt1;
-			var selector = opt2 ? opt1 : null;
-			if (!this.data || !this.data.size()) return 0;
-			var cnt = 0;
-			for (var i = 0; i < this.data.rows.length; i++) {
-				var row = this.data.rows[i];
-				if (!this.data.test(row, this.computedFilter)) continue;
-				if (selector && !this.data.test(row, selector)) continue;
-				fn(row);
-				cnt++;
-			}
-			return cnt;
-		},
-
-		/**
-		 * same as Qstore.find, but only on filtered data
-		 * @param {Object|Function} expr
-		 * @return {Array} rows
-		 */
-		find: function (expr) {
-			var rows = [];
-			for (var i = 0; i < this.data.rows.length; i++) {
-				var row = this.data.rows[i];
-				if (!this.data.test(row, this.computedFilter)) continue;
-				if (!this.data.test(row, expr)) continue;
-				rows.push(row);
-			}
-			return rows;
-		},
-
-		/**
-		 * switching page
-		 * @param {Number|String} page number of page or 'prev' or 'next'
-		 * @return {Boolean}
-		 */
-		switchPage: function(page) {
-			if (!page || !this.perPage || !this.rowsCnt) return false;
-			var pagesCnt = Math.ceil(this.rowsCnt / this.perPage);
-			if (page == 'prev') page = Number(this.page) - 1;
-			if (page == 'next') page = Number(this.page) + 1;
-			if (page > pagesCnt || page < 1) return false;
-			this.page = Number(page);
-			this.saveState();
-			this.render();
-			this.scrollTo(0);
-			this.emit('pageSwitch');
-			return true;
-		},
-
-		/**
-		 * @example
-		 *  table.addFilter({amount: {$gt: 200}});
-		 * @example
-		 *  table.addFilter('ammountFilter', {amount: {$gt: 200}});
-		 */
-		addFilter: function (opt1, opt2) {
-			var expr = null;
-			var name = null;
-			if (arguments.length == 1) expr = opt1;
-			if (arguments.length == 2) {
-				name = opt1;
-				expr = opt2;
-			}
-			name = name || 'defaultFilter';
-			this.filters[name] = expr;
-			this._computeFilter();
-		},
-
-		/**
-		 * @param {String} [name='defaultFilter']
-		 */
-		removeFilter: function (name) {
-			name = name || 'defaultFilter';
-			delete this.filters[name];
-			this._computeFilter();
-		},
-
-		/**
-		 * render table widgets
-		 */
-		renderWidgets: function () {
-			this.jqWidgets = this.layout.find('.widgets').empty();
-			for (var key in this.widgets) {
-				var widget = this.widgets[key];
-				var selector = '.widget.' + this.utils.toScore(widget.name);
-				var jqWidget = this.layout.find(selector);
-				if (!jqWidget.length) {
-					jqWidget = $(Haml.toHtml([selector]));
-					this.jqWidgets.append(jqWidget);
-				} else {
-					widget.target = selector;
+					var jqHscrollLayer = this.el.find('.hscroll-layer');
+					this.el.find('.hscroll-overflow').css({height: 'auto'});
+					if (this.scrollParams.horizontal) this.el.find('.hscroll-overflow').height(jqHscrollLayer.height());
 				}
-				widget.render && widget.render(jqWidget);
-			}
-		},
 
-		resetSort: function () {
-			this.sort = null;
-		},
+				this.scrollParams.overflowWidth = this.el.find('.hscroll-overflow').width();
+				this.scrollParams.layerWidth = this.el.find('.hscroll-layer').outerWidth();
+				this.scrollParams.overflowHeight = jqVOverflow.height();
+				this.scrollParams.layerHeight = this.el.find('.vscroll-layer').height();
 
-		/**
-		 * check or uncheck rows
-		 * @param {Number|Array|Object} expr maybe idx or array of idx or expr
-		 * @param {Boolean} [state=true]
-		 */
-		check: function (expr, state) {
-			//swap arguments
-			if ($.isArray(expr) || typeof(expr) == 'number' || typeof(expr) == 'string') expr = {idx: expr};
-			if (state === undefined) state = true;
+				this.scrollTo(this.scrollParams.vPos, this.scrollParams.hPos);
+				this.emit('resize');
+			},
 
-			this.forEach(expr, function (row) {
-				var idx = row.idx;
-				var selectedPos = $.inArray(idx, this.selection);
-				if (state) {
-					if (~selectedPos) return;
-					this.selection.push(idx);
+			disable: function () {
+				this.enabled = false;
+				this.el && this.el.off('.table');
+				this.emit('disable');
+			},
+
+			enable: function () {
+				this.enabled = false;
+				this._attachEvents();
+				this.emit('enable');
+			},
+
+			/**
+			 * apply function for each displayed row
+			 * forEach ([selector,] fn)
+			 * @param {Object|Function} opt1
+			 * @param {Function} [opt2]
+			 * @return {Number} processed rows count
+			 */
+			forEach: function (opt1, opt2) {
+				var fn = opt2 ? opt2 : opt1;
+				var selector = opt2 ? opt1 : null;
+				if (!this.data || !this.data.size()) return 0;
+				var cnt = 0;
+				for (var i = 0; i < this.data.rows.length; i++) {
+					var row = this.data.rows[i];
+					if (!this.data.test(row, this.computedFilter)) continue;
+					if (selector && !this.data.test(row, selector)) continue;
+					fn(row);
+					cnt++;
+				}
+				return cnt;
+			},
+
+			/**
+			 * same as Qstore.find, but only on filtered data
+			 * @param {Object|Function} expr
+			 * @return {Array} rows
+			 */
+			find: function (expr) {
+				var rows = [];
+				for (var i = 0; i < this.data.rows.length; i++) {
+					var row = this.data.rows[i];
+					if (!this.data.test(row, this.computedFilter)) continue;
+					if (!this.data.test(row, expr)) continue;
+					rows.push(row);
+				}
+				return rows;
+			},
+
+			/**
+			 * switching page
+			 * @param {Number|String} page number of page or 'prev' or 'next'
+			 * @return {Boolean}
+			 */
+			switchPage: function(page) {
+				if (!page || !this.perPage || !this.rowsCnt) return false;
+				var pagesCnt = Math.ceil(this.rowsCnt / this.perPage);
+				if (page == 'prev') page = Number(this.page) - 1;
+				if (page == 'next') page = Number(this.page) + 1;
+				if (page > pagesCnt || page < 1) return false;
+				this.page = Number(page);
+				this.saveState();
+				this.render();
+				this.scrollTo(0);
+				this.emit('pageSwitch');
+				return true;
+			},
+
+			/**
+			 * @example
+			 *  table.addFilter({amount: {$gt: 200}});
+			 * @example
+			 *  table.addFilter('ammountFilter', {amount: {$gt: 200}});
+			 */
+			addFilter: function (opt1, opt2) {
+				var expr = null;
+				var name = null;
+				if (arguments.length == 1) expr = opt1;
+				if (arguments.length == 2) {
+					name = opt1;
+					expr = opt2;
+				}
+				name = name || 'defaultFilter';
+				this.filters[name] = expr;
+				this._computeFilter();
+			},
+
+			/**
+			 * @param {String} [name='defaultFilter']
+			 */
+			removeFilter: function (name) {
+				name = name || 'defaultFilter';
+				delete this.filters[name];
+				this._computeFilter();
+			},
+
+			/**
+			 * render table widgets
+			 */
+			renderWidgets: function () {
+				var $defaultContainer = this.layout.find('.widgets');
+
+				// clear containers
+				$defaultContainer.empty();
+				var containers = {};
+				for (var key in this.widgets) {
+					var widget = this.widgets[key];
+					if (widget.container) containers[widget.container] == true;
+				}
+				for (var key in containers) {
+					var container = containers[key];
+					var $container = this.layout.find(container);
+					if ($container.length) $container.empty();
+				}
+
+				// render widgets
+				for (var key in this.widgets) {
+					var widget = this.widgets[key];
+					var container = widget.container;
+					if (!container) container = $defaultContainer;
+					if (typeof container == 'string') container = this.layout.find(container);
+					var jqWidget = $('<div class="widget widget-' + this.utils.toScore(widget.name) + '"></div>');
+					container.append(jqWidget);
+					widget.render && widget.render(jqWidget);
+				}
+			},
+
+			resetSort: function () {
+				this.sort = null;
+			},
+
+			/**
+			 * check or uncheck rows
+			 * @param {Number|Array|Object} expr maybe idx or array of idx or expr
+			 * @param {Boolean} [state=true]
+			 */
+			check: function (expr, state) {
+				//swap arguments
+				if ($.isArray(expr) || typeof(expr) == 'number' || typeof(expr) == 'string') expr = {idx: expr};
+				if (state === undefined) state = true;
+
+				this.forEach(expr, function (row) {
+					var idx = row.idx;
+					var selectedPos = $.inArray(idx, this.selection);
+					if (state) {
+						if (~selectedPos) return;
+						this.selection.push(idx);
+						return;
+					}
+
+					if (~selectedPos) {
+						this.selection.splice(selectedPos, 1);
+					}
+				}.bind(this));
+
+				this.emit('selectionChange');
+				this._renderChecked();
+			},
+
+			/**
+			 * @return {Number}
+			 */
+			checkedCnt: function () {
+				return this._checkAll ? this.rowsCnt : this.selection.length;
+			},
+
+			/**
+			 * rechek rows, need when selected rows was deleted
+			 */
+			recheck: function () {
+				if (!this.selectable) return;
+				if (this._checkAll) {
+					this.checkAll();
 					return;
 				}
 
-				if (~selectedPos) {
-					this.selection.splice(selectedPos, 1);
-				}
-			}.bind(this));
-
-			this.emit('selectionChange');
-			this._renderChecked();
-		},
-
-		/**
-		 * @return {Number}
-		 */
-		checkedCnt: function () {
-			return this._checkAll ? this.rowsCnt : this.selection.length;
-		},
-
-		/**
-		 * rechek rows, need when selected rows was deleted
-		 */
-		recheck: function () {
-			if (!this.selectable) return;
-			if (this._checkAll) {
-				this.checkAll();
-				return;
-			}
-
-			for (var key = 0; key < this.data.rows.length; key++) {
-				var row = this.data.rows[key];
-				if (!this.data.test(row, this.computedFilter)) {
-					var selectionPos = $.inArray(row.idx, this.selection);
-					if (~selectionPos) this.selection.splice(selectionPos, 1);
-				}
-			}
-			this.emit('selectionChange');
-			this._renderChecked();
-		},
-
-		/**
-		 * check or uncheck page rows
-		 * @param {Boolean} [state=true]
-		 */
-		checkPage: function (state) {
-			if (state === undefined) state = true;
-			if (state) {
-				var jqCheckbox = this.layout.find('th.col-checkbox .checkbox');
-				jqCheckbox.removeClass('checked-all');
-				jqCheckbox.addClass('checked');
-			} else {
-				this._checkAll = false;
-			}
-			var checkArr = [];
-			var data = this.data.find(this.computedFilter);
-			var from = this.page * this.perPage - this.perPage;
-			var to = from + this.perPage;
-			if (this.data && to > this.rowsCnt) to = this.rowsCnt;
-			for (var i = from; i < to; i++) {
-				var row = data[i];
-				if (!row) continue;
-				checkArr.push(row.idx);
-			}
-			this.check(checkArr, state);
-		},
-
-		/**
-		 * check or uncheck filtered rows
-		 * checkAll([expr], state)
-		 * @param {Object|Function} [expr]
-		 * @param {Boolean} [state=true]
-		 */
-		checkAll: function (expr, state) {
-			var self = this;
-			if (!expr || typeof(expr) == 'boolean') {
-				state = expr;
-				expr = null;
-			}
-			if (state === undefined) state = true;
-			this._checkAll = !expr && state;
-			var jqCheckbox = this.layout.find('th.col-checkbox .checkbox');
-			if (expr) {
-				this.forEach(function (row) {
-					var pos = $.inArray(row.idx, this.selection);
-					var rowState = this.data.test(row, expr) && state;
-					if (!rowState && !~pos) return;
-					if (!rowState && ~pos) {
-						this.selection.splice(pos, 1);
-						return;
+				for (var key = 0; key < this.data.rows.length; key++) {
+					var row = this.data.rows[key];
+					if (!this.data.test(row, this.computedFilter)) {
+						var selectionPos = $.inArray(row.idx, this.selection);
+						if (~selectionPos) this.selection.splice(selectionPos, 1);
 					}
-					if(!~pos) this.selection.push(row.idx);
-				}.bind(this));
+				}
+				this.emit('selectionChange');
+				this._renderChecked();
+			},
 
-			} else {
-				this.selection = [];
+			/**
+			 * check or uncheck page rows
+			 * @param {Boolean} [state=true]
+			 */
+			checkPage: function (state) {
+				if (state === undefined) state = true;
 				if (state) {
-					jqCheckbox.removeClass('checked');
+					var jqCheckbox = this.layout.find('th.col-checkbox .checkbox');
+					jqCheckbox.removeClass('checked-all');
+					jqCheckbox.addClass('checked');
+				} else {
+					this._checkAll = false;
+				}
+				var checkArr = [];
+				var data = this.data.find(this.computedFilter);
+				var from = this.page * this.perPage - this.perPage;
+				var to = from + this.perPage;
+				if (this.data && to > this.rowsCnt) to = this.rowsCnt;
+				for (var i = from; i < to; i++) {
+					var row = data[i];
+					if (!row) continue;
+					checkArr.push(row.idx);
+				}
+				this.check(checkArr, state);
+			},
+
+			/**
+			 * check or uncheck filtered rows
+			 * checkAll([expr], state)
+			 * @param {Object|Function} [expr]
+			 * @param {Boolean} [state=true]
+			 */
+			checkAll: function (expr, state) {
+				var self = this;
+				if (!expr || typeof(expr) == 'boolean') {
+					state = expr;
+					expr = null;
+				}
+				if (state === undefined) state = true;
+				this._checkAll = !expr && state;
+				var jqCheckbox = this.layout.find('th.col-checkbox .checkbox');
+				if (expr) {
 					this.forEach(function (row) {
-						self.selection.push(row.idx);
-					});
-					jqCheckbox.addClass('checked-all');
+						var pos = $.inArray(row.idx, this.selection);
+						var rowState = this.data.test(row, expr) && state;
+						if (!rowState && !~pos) return;
+						if (!rowState && ~pos) {
+							this.selection.splice(pos, 1);
+							return;
+						}
+						if(!~pos) this.selection.push(row.idx);
+					}.bind(this));
 
 				} else {
 					this.selection = [];
-					jqCheckbox.removeClass('checked-all');
-					jqCheckbox.removeClass('checked');
-				}
-			}
+					if (state) {
+						jqCheckbox.removeClass('checked');
+						this.forEach(function (row) {
+							self.selection.push(row.idx);
+						});
+						jqCheckbox.addClass('checked-all');
 
-			this.emit('selectionChange');
-			this._renderChecked();
-		},
-
-		isChecked: function (idx) {
-			return ~$.inArray(idx, this.selection);
-		},
-
-		/**
-		 * table events processing
-		 * @param {String} eventName
-		 * @param [data]
-		 */
-		emit: function(eventName, data) {
-			//throw event to widgets
-			for (var widgetName in this.widgets) {
-				this.widgets[widgetName]._receive(eventName, data);
-			}
-			//external handler
-			this.on && this.on[eventName] && this.on[eventName](data);
-		},
-
-		lock: function () {
-			if (this.locked == true) return;
-			this.locked = true;
-			this.emit('tableLock');
-		},
-
-		unlock: function () {
-			if (this.locked == false) return;
-			this.locked = false;
-			this.emit('tableUnlock');
-		},
-
-		/**
-		 *
-		 * @param {Number} idx
-		 * @param {String} [content]
-		 * @param {String} [animate]
-		 * @returns {*}
-		 */
-		showSubrow: function (idx, content, animate) {
-			if (!idx) return false;
-			var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
-			var row = this.data.findOne({idx: idx});
-			if (!jqRow.length) return false;
-			var tplParams = {tpl: {subrow: true}, table: this, row: row, content: content}
-			var jqSubrow = $(this.templates.subrow(tplParams));
-			jqRow.addClass('has-subrow');
-			jqSubrow.insertAfter(jqRow);
-			if (animate) jqSubrow.find('td').hide().show(animate);
-			return jqSubrow;
-		},
-		
-		hideSubrow: function (idx) {
-			if (!idx) {
-				this.layout.find('.has-subrow').removeClass('has-subrow');
-				this.layout.find('.subrow').remove();
-				return;
-			}
-			
-			var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
-			if (!jqRow.hasClass('has-subrow')) return;
-			jqRow.removeClass('has-subrow');
-			var jqSubrow = jqRow.next();
-			if (!jqSubrow.hasClass('subrow')) return;
-			jqSubrow.remove();
-		},
-		
-		toggleSubrow: function (idx) {
-			if (!idx) return;
-			var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
-			jqRow.hasClass('has-subrow') ? this.hideSubrow(idx) : this.showSubrow(idx);
-		},
-
-		/**
-		 * add custom css-class for table
-		 * @param {String} cssClass
-		 * @returns {boolean}
-		 */
-		addClass: function (cssClass) {
-			if (typeof(cssClass) != 'string') return false;
-			if (~$.inArray(cssClass, this.cssClasses)) return false;
-			this.cssClasses.push(cssClass);
-			this.layout && this.layout.addClass(cssClass);
-			return true;
-		},
-
-		/**
-		 * remove custom css-class from table
-		 * @param {String} cssClass
-		 */
-		removeClass: function (cssClass) {
-			if (typeof(cssClass) != 'string') return false;
-			var pos = $.inArray(cssClass, this.cssClasses);
-			if (!~pos) return false;
-			this.cssClasses.splice(pos, 1);
-			this.layout && this.layout.removeClass(cssClass);
-			return true;
-		},
-
-		/**
-		 * save table state to cookie
-		 */
-		saveState: function () {
-			//TODO: fix loadState without JSON
-			return false
-			var state = {
-				page: this.page,
-				perPage: this.perPage,
-				sort: this.sort
-			};
-			$.cookie('table_' + this.name, JSON.stringify(state));
-		},
-
-		/**
-		 * load table state from cookie
-		 */
-		loadState: function () {
-			var state = JSON.parse($.cookie('table_' + this.name));
-			state = $.extend({page: this.page, perPage: this.perPage, sort: this.sort}, state);
-			this.page = state.page;
-			this.perPage = state.perPage;
-			this.sort = state.sort;
-		},
-
-		/**
-		 * scroll to posiniton in pixels or percent
-		 * @example
-		 * table.scrollTo('50%', 50);
-		 *
-		 * @param {Number|String} offsetY
-		 * @param {Number|String} offsetX
-		 */
-		scrollTo: function (offsetY, offsetX) {
-
-			if (offsetY !== undefined && this.scrollParams.vertical) {
-			//set vertical scroll layer position
-				var maxVscroll = this.scrollParams.layerHeight - this.scrollParams.overflowHeight;
-				if (maxVscroll < 0) maxVscroll = 0;
-
-				//if offsetY in percent
-				if (String(offsetY).indexOf('%') != -1) {
-					var percent = Number(offsetY.split('%')[0]);
-					offsetY = (percent/100) * maxVscroll;
-				}
-
-				if (offsetY < 0 || !offsetY) offsetY = 0;
-
-				if (offsetY > maxVscroll) offsetY = maxVscroll;
-				this.layout.find('.vscroll-layer:first').css({top: -offsetY});
-				this.scrollParams.vPos = offsetY;
-
-				//set scrollbar
-				var jqVscroll = this.el.find('.vscroll:first');
-				var jqScrollTrack =  jqVscroll.find('.scroll-track');
-				var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
-				var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
-				if (vScaleFactor > 1) {
-					jqVscroll.addClass('disabled');
-					this.layout.removeClass('vscroll-active');
-					this.scrollParams.vScrollActive = false;
-				} else {
-					jqVscroll.removeClass('disabled');
-					this.layout.addClass('vscroll-active');
-					this.scrollParams.vScrollActive = true;
-					var vBarHeight = vScaleFactor * jqScrollTrack.height();
-					var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
-					if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
-					jqScrollbar.height(vBarHeight);
-					jqScrollbar.css({top: this.scrollParams.vPos * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
-				}
-			}
-
-
-			if (offsetX !== undefined && this.scrollParams.horizontal) {
-				//set vertical scroll layer position
-				var maxHscroll = this.scrollParams.layerWidth - this.scrollParams.overflowWidth;
-				if (maxHscroll < 0) maxHscroll = 0;
-
-				//if offsetX in percent
-				if (String(offsetX).indexOf('%') != -1) {
-					var percent = Number(offsetX.split('%')[0]);
-					offsetX = (percent/100) * maxHscroll;
-				}
-
-				if (offsetX < 0 || !offsetX) offsetX = 0;
-
-				if (offsetX > maxHscroll) offsetX = maxHscroll;
-				this.layout.find('.hscroll-layer:first').css({left: -offsetX});
-				this.scrollParams.hPos = offsetX;
-
-				//set scrollbar
-				var jqHscroll = this.el.find('.hscroll:first');
-				var jqScrollTrack =  jqHscroll.find('.scroll-track');
-				var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
-				var hScaleFactor = this.scrollParams.overflowWidth / this.scrollParams.layerWidth;
-				if (hScaleFactor >= 1) {
-					jqHscroll.addClass('disabled');
-					this.scrollParams.hScrollActive = false;
-					this.layout.removeClass('hscroll-active');
-					return;
-				}
-				jqHscroll.removeClass('disabled');
-				this.layout.addClass('hscroll-active');
-				this.scrollParams.hScrollActive = true;
-				var hBarWidth = hScaleFactor * jqScrollTrack.width();
-				var hBarMinWidth = jqScrollbar.css('min-width').split('px')[0];
-				if (hBarWidth < hBarMinWidth) hBarWidth = hBarMinWidth;
-				jqScrollbar.width(hBarWidth);
-				jqScrollbar.css({left: this.scrollParams.hPos * (jqScrollTrack.width() - hBarWidth) / (this.scrollParams.layerWidth - this.scrollParams.overflowWidth)});
-			}
-			this.emit('scroll', {offsetY: offsetY, offsetX: offsetX});
-		},
-
-		enableTextSelection: function () {
-			this.canSelectText = true;
-			this.layout.removeClass('unselectable');
-		},
-
-		disableTextSelection: function () {
-			this.canSelectText = false;
-			this.layout.addClass('unselectable');
-		},
-
-		/**
-		 * render selection
-		 * @private
-		 */
-		_renderChecked: function () {
-			var self = this;
-			var jqRows = this.layout.find('.dtable tbody tr:not(.fake)');
-			var rowsOnPageCnt = jqRows.length;
-			var i = 0;
-			jqRows.each(function () {
-				var jqRow =  $(this);
-				var idx = Number(jqRow.attr('rel'));
-				if (self._checkAll || ~$.inArray(idx, self.selection)) {
-					i++;
-					jqRow.addClass('selected');
-					jqRow.find('.col-checkbox .checkbox').addClass('checked');
-					return;
-				}
-				jqRow.removeClass('selected');
-				jqRow.find('.col-checkbox .checkbox').removeClass('checked');
-			});
-			if (this._checkAll) {
-				this.layout.find('.dtable th.col-checkbox .checkbox').removeClass('checked').addClass('checked-all');
-			} else if (i == rowsOnPageCnt) {
-				this.layout.find('.dtable th.col-checkbox .checkbox').addClass('checked');
-			}
-			if (this.selection.length) {
-				this.layout.addClass('has-selected');
-			} else {
-				this.layout.removeClass('has-selected');
-			}
-		},
-
-		/**
-		 * calculates the main filter, based on all filters
-		 * also recalculate rowsCnt and pagesCnt
-		 * @private
-		 */
-		_computeFilter: function () {
-			this.computedFilter = {$and: []};
-			var cnt = 0;
-			for (var key in this.filters) {
-				if (this.filters[key]) {
-					this.computedFilter.$and.push(this.filters[key]);
-					cnt++;
-				}
-			}
-			if (!cnt) this.computedFilter = null;
-			this.rowsCnt = this.data.find(this.computedFilter).length;
-			var pagesCnt = Math.ceil(this.rowsCnt / this.perPage);
-			if (this.page < 1) this.page = 1;
-			if (pagesCnt && this.page > pagesCnt) this.page = pagesCnt;
-			this.emit('filter');
-		},
-
-		/**
-		 * attach delegated DOM events
-		 * @return {Boolean}
-		 * @private
-		 */
-		_attachEvents: function () {
-			if (!this.el || !this.el.length) return false;
-			var self = this;
-			this.el.off('.table');
-
-			this.el.on('mousemove.table', function (e) {
-				this.clientX = e.clientX;
-				this.clientY = e.clientY;
-				this.pageX = e.pageX;
-				this.pageY = e.pageY;
-
-				if (this.scrollParams.isVscrolling) {
-					e.preventDefault()
-					var jqScrollTrack = this.el.find('.vscroll:first .scroll-track');
-					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
-					var maxScroll = jqScrollTrack.height() - jqScrollbar.outerHeight();
-					var scroll = this.pageY - jqScrollTrack.offset().top - this.scrollParams.vBarOffsetY;
-					if (scroll < 0) scroll = 0;
-					var scrollPercent = (scroll / maxScroll * 100) + '%';
-					this.scrollTo(scrollPercent);
-				}
-
-
-				if (this.scrollParams.isHscrolling) {
-					e.preventDefault()
-					var jqScrollTrack = this.el.find('.hscroll:first .scroll-track');
-					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
-					var maxScroll = jqScrollTrack.width() - jqScrollbar.outerWidth();
-					var scroll = this.pageX - jqScrollTrack.offset().left - this.scrollParams.hBarOffsetX;
-					if (scroll < 0) scroll = 0;
-					var scrollPercent = (scroll / maxScroll * 100) + '%';
-					this.scrollTo(undefined, scrollPercent);
-				}
-
-			}.bind(this));
-
-			this.el.on('mousewheel.table', '.dtable', function (e, undefined, deltaX, deltaY) {
-				if (!this.scrollParams.vertical) return;
-				var vAcceleration = this.scrollParams.vAcceleration;
-				var hAcceleration = this.scrollParams.hAcceleration;
-				var scrollY = this.scrollParams.vPos;
-				var scrollX = this.scrollParams.hPos
-				deltaY = deltaY * vAcceleration;
-				deltaX = deltaX * hAcceleration;
-				deltaY = deltaY > 0 ? Math.ceil(deltaY) : Math.floor(deltaY);
-				deltaX = deltaX > 0 ? Math.ceil(deltaX) : Math.floor(deltaX);
-				this.scrollTo(scrollY - deltaY, scrollX - deltaX);
-				e.preventDefault();
-			}.bind(this));
-
-			this.el.on('mousedown.table', '.vscroll .at-scrollbar', function (e) {
-				e.preventDefault()
-				var jqScrollbar = $(e.currentTarget);
-				this.scrollParams.vBarOffsetY = e.offsetY || e.originalEvent.layerY;
-				this.scrollParams.isVscrolling = true;
-				jqScrollbar.closest('.vscroll').addClass('active');
-				this.disableTextSelection();
-			}.bind(this));
-
-			this.el.on('mousedown.table', '.hscroll .at-scrollbar', function (e) {
-				e.preventDefault()
-				var jqScrollbar = $(e.currentTarget);
-				this.scrollParams.hBarOffsetX = e.offsetX || e.originalEvent.layerX;
-				this.scrollParams.isHscrolling = true;
-				jqScrollbar.closest('.hscroll').addClass('active');
-				this.disableTextSelection();
-			}.bind(this));
-
-			this.el.on('mouseup.table', function (e) {
-				this.scrollParams.isVscrolling = false;
-				this.scrollParams.isHscrolling = false;
-				this.el.find('.vscroll, .hscroll').removeClass('active');
-				this.enableTextSelection();
-			}.bind(this));
-
-			//sort
-			this.el.on('click.table', '.dtable th', function () {
-				var sort = [];
-				var fieldName = $(this).attr('rel');
-				var resetSort = false;
-				if (!self.fields[fieldName] || !self.fields[fieldName].sortable) return false;
-				var order = 'desc';
-				if ($(this).hasClass('desc')) order = 'asc';
-				if ($(this).hasClass('asc')) {
-					if (self.defaultSort) {
-						resetSort = true;
 					} else {
-						order = 'desc';
+						this.selection = [];
+						jqCheckbox.removeClass('checked-all');
+						jqCheckbox.removeClass('checked');
 					}
 				}
-				if (resetSort) {
-					self.sort = null;
-					self.data.sort(self.defaultSort);
-				} else {
-					sort.push({fieldName: fieldName, order: order});
-					self.sort = sort;
-					self.data.sort(sort);
+
+				this.emit('selectionChange');
+				this._renderChecked();
+			},
+
+			isChecked: function (idx) {
+				return ~$.inArray(idx, this.selection);
+			},
+
+			/**
+			 * table events processing
+			 * @param {String} eventName
+			 * @param [data]
+			 */
+			emit: function(eventName, data) {
+				//throw event to widgets
+				for (var widgetName in this.widgets) {
+					this.widgets[widgetName]._receive(eventName, data);
 				}
-				self.saveState();
-				self.render();
-				self.scrollTo(0);
-				return false;
-			});
+				//external handler
+				this.on && this.on[eventName] && this.on[eventName](data);
+			},
 
-			//pagination
-			this.el.on('click.table', '.pager a', function (e) {
-				self.switchPage($(this).attr('rel'));
-				e.preventDefault();
-			});
+			lock: function () {
+				if (this.locked == true) return;
+				this.locked = true;
+				this.emit('tableLock');
+			},
 
-			//checkboxes
-			this.el.on('click.table', 'td.col-checkbox', function (e) {
-				var jqCheckbox = $(e.currentTarget).find('.checkbox');
-				var idx = jqCheckbox.attr('rel');
+			unlock: function () {
+				if (this.locked == false) return;
+				this.locked = false;
+				this.emit('tableUnlock');
+			},
+
+			/**
+			 *
+			 * @param {Number} idx
+			 * @param {String} [content]
+			 * @param {String} [animate]
+			 * @returns {*}
+			 */
+			showSubrow: function (idx, content, animate) {
+				if (!idx) return false;
+				var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
+				var row = this.data.findOne({idx: idx});
+				if (!jqRow.length) return false;
+				var tplParams = {tpl: {subrow: true}, table: this, row: row, content: content}
+				var jqSubrow = $(this.templates.subrow(tplParams));
+				jqRow.addClass('has-subrow');
+				jqSubrow.insertAfter(jqRow);
+				if (animate) jqSubrow.find('td').hide().show(animate);
+				return jqSubrow;
+			},
+
+			hideSubrow: function (idx) {
+				if (!idx) {
+					this.layout.find('.has-subrow').removeClass('has-subrow');
+					this.layout.find('.subrow').remove();
+					return;
+				}
+
+				var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
+				if (!jqRow.hasClass('has-subrow')) return;
+				jqRow.removeClass('has-subrow');
+				var jqSubrow = jqRow.next();
+				if (!jqSubrow.hasClass('subrow')) return;
+				jqSubrow.remove();
+			},
+
+			toggleSubrow: function (idx) {
 				if (!idx) return;
-				self.check(idx, !jqCheckbox.hasClass('checked'));
-				if (!e.shiftKey) {
-					self.lastCheckedIdx = idx;
-					return;
-				}
-				if (!self.lastCheckedIdx) return;
+				var jqRow = this.layout.find('.data-table tr[rel="' + idx +'"]');
+				jqRow.hasClass('has-subrow') ? this.hideSubrow(idx) : this.showSubrow(idx);
+			},
 
-				var tmp;
-				var fromIdx = idx;
-				var toIdx = self.lastCheckedIdx;
-				var jqFromRow = self.el.find('.dtable tr[rel="' + fromIdx + '"]');
-				var jqToRow = self.el.find('.dtable tr[rel="' + toIdx + '"]');
-				if (jqFromRow.index() > jqToRow.index()) {
-					tmp = jqFromRow;
-					jqFromRow = jqToRow;
-					jqToRow = tmp;
-				}
-				var jqRow = jqFromRow;
-				var checkIdxs = [];
-				while ((jqRow = jqRow.next()).length) {
-					if (jqRow.attr('rel') == jqToRow.attr('rel')) break;
-					checkIdxs.push(jqRow.attr('rel'));
-				}
-				self.check(checkIdxs, true);
-				self.render();
-			});
+			/**
+			 * add custom css-class for table
+			 * @param {String} cssClass
+			 * @returns {boolean}
+			 */
+			addClass: function (cssClass) {
+				if (typeof(cssClass) != 'string') return false;
+				if (~$.inArray(cssClass, this.cssClasses)) return false;
+				this.cssClasses.push(cssClass);
+				this.layout && this.layout.addClass(cssClass);
+				return true;
+			},
 
-			//multiple check
-			this.el.on('click.table', 'th.col-checkbox', function (e) {
-				var jqCheckbox = $(e.currentTarget).find('.checkbox');
-				if (jqCheckbox.hasClass('checked')) {
-					self.checkAll();
-					return;
-				}
-				if (jqCheckbox.hasClass('checked-all')) {
-					self.checkAll(false);
-					return;
-				}
-				self.checkPage();
-			});
+			/**
+			 * remove custom css-class from table
+			 * @param {String} cssClass
+			 */
+			removeClass: function (cssClass) {
+				if (typeof(cssClass) != 'string') return false;
+				var pos = $.inArray(cssClass, this.cssClasses);
+				if (!~pos) return false;
+				this.cssClasses.splice(pos, 1);
+				this.layout && this.layout.removeClass(cssClass);
+				return true;
+			},
 
-			var fnMouseOutRow = function (jqRow) {
-				jqRow.removeClass('hovered');
-				jqRow.find('.editable').each(function () {
-					var jqCell = $(this);
-					var fieldName = jqCell.attr('rel');
-					if (jqCell.data('editArea')) {
-						jqCell.find('input[name="' + fieldName + '"]').replaceWith(jqCell.data('editArea'));
-						jqCell.removeData('editArea');
-					} else {
-						jqCell.html(jqCell.data('content'));
-						jqCell.removeData('content');
+			/**
+			 * save table state to cookie
+			 */
+			saveState: function () {
+				//TODO: fix loadState without JSON
+				return false
+				var state = {
+					page: this.page,
+					perPage: this.perPage,
+					sort: this.sort
+				};
+				$.cookie('table_' + this.name, JSON.stringify(state));
+			},
+
+			/**
+			 * load table state from cookie
+			 */
+			loadState: function () {
+				var state = JSON.parse($.cookie('table_' + this.name));
+				state = $.extend({page: this.page, perPage: this.perPage, sort: this.sort}, state);
+				this.page = state.page;
+				this.perPage = state.perPage;
+				this.sort = state.sort;
+			},
+
+			/**
+			 * scroll to posiniton in pixels or percent
+			 * @example
+			 * table.scrollTo('50%', 50);
+			 *
+			 * @param {Number|String} offsetY
+			 * @param {Number|String} offsetX
+			 */
+			scrollTo: function (offsetY, offsetX) {
+
+				if (offsetY !== undefined && this.scrollParams.vertical) {
+					//set vertical scroll layer position
+					var maxVscroll = this.scrollParams.layerHeight - this.scrollParams.overflowHeight;
+					if (maxVscroll < 0) maxVscroll = 0;
+
+					//if offsetY in percent
+					if (String(offsetY).indexOf('%') != -1) {
+						var percent = Number(offsetY.split('%')[0]);
+						offsetY = (percent/100) * maxVscroll;
 					}
+
+					if (offsetY < 0 || !offsetY) offsetY = 0;
+
+					if (offsetY > maxVscroll) offsetY = maxVscroll;
+					this.layout.find('.vscroll-layer:first').css({top: -offsetY});
+					this.scrollParams.vPos = offsetY;
+
+					//set scrollbar
+					var jqVscroll = this.el.find('.vscroll:first');
+					var jqScrollTrack =  jqVscroll.find('.scroll-track');
+					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
+					var vScaleFactor = this.scrollParams.overflowHeight / this.scrollParams.layerHeight;
+					if (vScaleFactor > 1) {
+						jqVscroll.addClass('disabled');
+						this.layout.removeClass('vscroll-active');
+						this.scrollParams.vScrollActive = false;
+					} else {
+						jqVscroll.removeClass('disabled');
+						this.layout.addClass('vscroll-active');
+						this.scrollParams.vScrollActive = true;
+						var vBarHeight = vScaleFactor * jqScrollTrack.height();
+						var vBarMinHeight = jqScrollbar.css('min-height').split('px')[0];
+						if (vBarHeight < vBarMinHeight) vBarHeight = vBarMinHeight;
+						jqScrollbar.height(vBarHeight);
+						jqScrollbar.css({top: this.scrollParams.vPos * (jqScrollTrack.height() - vBarHeight) / (this.scrollParams.layerHeight - this.scrollParams.overflowHeight)});
+					}
+				}
+
+
+				if (offsetX !== undefined && this.scrollParams.horizontal) {
+					//set vertical scroll layer position
+					var maxHscroll = this.scrollParams.layerWidth - this.scrollParams.overflowWidth;
+					if (maxHscroll < 0) maxHscroll = 0;
+
+					//if offsetX in percent
+					if (String(offsetX).indexOf('%') != -1) {
+						var percent = Number(offsetX.split('%')[0]);
+						offsetX = (percent/100) * maxHscroll;
+					}
+
+					if (offsetX < 0 || !offsetX) offsetX = 0;
+
+					if (offsetX > maxHscroll) offsetX = maxHscroll;
+					this.layout.find('.hscroll-layer:first').css({left: -offsetX});
+					this.scrollParams.hPos = offsetX;
+
+					//set scrollbar
+					var jqHscroll = this.el.find('.hscroll:first');
+					var jqScrollTrack =  jqHscroll.find('.scroll-track');
+					var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
+					var hScaleFactor = this.scrollParams.overflowWidth / this.scrollParams.layerWidth;
+					if (hScaleFactor >= 1) {
+						jqHscroll.addClass('disabled');
+						this.scrollParams.hScrollActive = false;
+						this.layout.removeClass('hscroll-active');
+						return;
+					}
+					jqHscroll.removeClass('disabled');
+					this.layout.addClass('hscroll-active');
+					this.scrollParams.hScrollActive = true;
+					var hBarWidth = hScaleFactor * jqScrollTrack.width();
+					var hBarMinWidth = jqScrollbar.css('min-width').split('px')[0];
+					if (hBarWidth < hBarMinWidth) hBarWidth = hBarMinWidth;
+					jqScrollbar.width(hBarWidth);
+					jqScrollbar.css({left: this.scrollParams.hPos * (jqScrollTrack.width() - hBarWidth) / (this.scrollParams.layerWidth - this.scrollParams.overflowWidth)});
+				}
+				this.emit('scroll', {offsetY: offsetY, offsetX: offsetX});
+			},
+
+			enableTextSelection: function () {
+				this.canSelectText = true;
+				this.layout.removeClass('unselectable');
+			},
+
+			disableTextSelection: function () {
+				this.canSelectText = false;
+				this.layout.addClass('unselectable');
+			},
+
+			/**
+			 * render selection
+			 * @private
+			 */
+			_renderChecked: function () {
+				var self = this;
+				var jqRows = this.layout.find('.dtable tbody tr:not(.fake)');
+				var rowsOnPageCnt = jqRows.length;
+				var i = 0;
+				jqRows.each(function () {
+					var jqRow =  $(this);
+					var idx = Number(jqRow.attr('rel'));
+					if (self._checkAll || ~$.inArray(idx, self.selection)) {
+						i++;
+						jqRow.addClass('selected');
+						jqRow.find('.col-checkbox .checkbox').addClass('checked');
+						return;
+					}
+					jqRow.removeClass('selected');
+					jqRow.find('.col-checkbox .checkbox').removeClass('checked');
 				});
-			};
-
-
-			//dtable mouseleave
-			this.el.on('mouseleave.table', '.dtable', function () {
-				fnMouseOutRow(self.el.find('tr.hovered:not(.focused)'));
-			}.bind(this));
-
-			//table mouseleave
-			this.el.on('mouseleave.table', function () {
-				this.scrollParams.isVscrolling = false;
-				this.scrollParams.isHscrolling = false;
-			}.bind(this));
-
-			//fields mouseenter
-			this.el.on('mouseenter.table', 'tr:not(.focused)', function (e) {
-				var jqPrevRow = self.el.find('tr.hovered:not(.focused)');
-				fnMouseOutRow(jqPrevRow);
-				var jqRow = $(e.currentTarget);
-				if (jqRow.hasClass('fake')) return;
-				if (jqRow.hasClass('vscroll-overflow-tr')) return;
-				jqRow.addClass('hovered');
-				jqRow.find('.editable').each(function () {
-					var jqCell = $(this);
-					var fieldName = jqCell.attr('rel');
-					var value = jqCell.attr('value');
-					var jqEditArea = jqCell.find('.edit-area');
-					var jqField = '<input type="text" name="' + fieldName + '" value="' + (value !== undefined ? value : '') + '"/>';
-					if (jqCell.data('editArea')) return;
-					if (jqEditArea.length) {
-						jqCell.data('editArea', jqEditArea.replaceWith(jqField));
-					} else {
-						var cellContent = jqCell.html();
-						jqCell.html(jqField);
-						jqCell.data('content', cellContent);
-					}
-				});
-			});
-
-			this.el.on('mouseleave.table', '.vscroll-layer', function (e) {
-				fnMouseOutRow(this.el.find('tr.hovered:not(.focused)'));
-			}.bind(this));
-
-			//input focusin
-			this.el.on('focusin.table', 'tr .editable input', function (e) {
-				var jqInput = $(e.currentTarget);
-				var jqRow = jqInput.closest('tr');
-				self.el.find('tr.focused').removeClass('focused').mouseleave();
-				jqRow.addClass('focused');
-			});
-
-			//input focusout
-			this.el.on('focusout.table', '.editable input', function (e) {
-				var jqRow = $(e.currentTarget).closest('tr');
-				jqRow.removeClass('focused');
-				fnMouseOutRow(jqRow);
-			});
-
-			//editable fields keyup
-			this.el.on('keyup.table', '.editable input', function (e) {
-				var jqInput = $(e.currentTarget);
-				var jqCell = jqInput.closest('td');
-				var value = jqInput.val();
-				var field = self.fields[jqInput.attr('name')];
-				var err = 0;
-
-				if (field.minValue !== undefined) {
-					if (value == '') {
-						err++;
-					} else {
-						value = Number(value);
-						if (isNaN(value)) {
-							err++;
-						} else if (value < field.minValue) {
-							err++;
-						}
-					}
+				if (this._checkAll) {
+					this.layout.find('.dtable th.col-checkbox .checkbox').removeClass('checked').addClass('checked-all');
+				} else if (i == rowsOnPageCnt) {
+					this.layout.find('.dtable th.col-checkbox .checkbox').addClass('checked');
 				}
-
-				if (field.maxValue !== undefined) {
-					if (value == '') {
-						err++;
-					} else {
-						value = Number(value);
-						if (isNaN(value)) {
-							err++;
-						} else if (value > field.maxValue) {
-							err++;
-						}
-					}
-				}
-
-				if ((field.validation instanceof RegExp) && !field.validation.test(value)) {
-					err++;
-				}
-
-				if (err) {
-					jqCell.addClass('invalid');
+				if (this.selection.length) {
+					this.layout.addClass('has-selected');
 				} else {
-					jqCell.removeClass('invalid')
+					this.layout.removeClass('has-selected');
 				}
-			});
+			},
 
-			//input keypress
-			this.el.on('keypress.table', '.editable input', function (e) {
-				var jqTd = $(e.currentTarget).closest('td'), keyCode = e.keyCode || e.which;
-				if (jqTd.hasClass('number')) {
-					~$.inArray(keyCode,ARROWS_BS_DEL)
-						|| (keyCode >= DIGIT_BOUNDS[0] && keyCode <= DIGIT_BOUNDS[1])
-						|| e.preventDefault();
+			/**
+			 * calculates the main filter, based on all filters
+			 * also recalculate rowsCnt and pagesCnt
+			 * @private
+			 */
+			_computeFilter: function () {
+				this.computedFilter = {$and: []};
+				var cnt = 0;
+				for (var key in this.filters) {
+					if (this.filters[key]) {
+						this.computedFilter.$and.push(this.filters[key]);
+						cnt++;
+					}
 				}
-			});
+				if (!cnt) this.computedFilter = null;
+				this.rowsCnt = this.data.find(this.computedFilter).length;
+				var pagesCnt = Math.ceil(this.rowsCnt / this.perPage);
+				if (this.page < 1) this.page = 1;
+				if (pagesCnt && this.page > pagesCnt) this.page = pagesCnt;
+				this.emit('filter');
+			},
 
-			//input change
-			this.el.on('change.table', '.editable input', function (e) {
-				var jqInput = $(e.currentTarget);
-				var jqCell = jqInput.closest('td');
-				if (jqCell.hasClass('invalid')) {
+			/**
+			 * attach delegated DOM events
+			 * @return {Boolean}
+			 * @private
+			 */
+			_attachEvents: function () {
+				if (!this.el || !this.el.length) return false;
+				var self = this;
+				this.el.off('.table');
+
+				this.el.on('mousemove.table', function (e) {
+					this.clientX = e.clientX;
+					this.clientY = e.clientY;
+					this.pageX = e.pageX;
+					this.pageY = e.pageY;
+
+					if (this.scrollParams.isVscrolling) {
+						e.preventDefault()
+						var jqScrollTrack = this.el.find('.vscroll:first .scroll-track');
+						var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
+						var maxScroll = jqScrollTrack.height() - jqScrollbar.outerHeight();
+						var scroll = this.pageY - jqScrollTrack.offset().top - this.scrollParams.vBarOffsetY;
+						if (scroll < 0) scroll = 0;
+						var scrollPercent = (scroll / maxScroll * 100) + '%';
+						this.scrollTo(scrollPercent);
+					}
+
+
+					if (this.scrollParams.isHscrolling) {
+						e.preventDefault()
+						var jqScrollTrack = this.el.find('.hscroll:first .scroll-track');
+						var jqScrollbar = jqScrollTrack.find('.at-scrollbar');
+						var maxScroll = jqScrollTrack.width() - jqScrollbar.outerWidth();
+						var scroll = this.pageX - jqScrollTrack.offset().left - this.scrollParams.hBarOffsetX;
+						if (scroll < 0) scroll = 0;
+						var scrollPercent = (scroll / maxScroll * 100) + '%';
+						this.scrollTo(undefined, scrollPercent);
+					}
+
+				}.bind(this));
+
+				this.el.on('mousewheel.table', '.dtable', function (e, undefined, deltaX, deltaY) {
+					if (!this.scrollParams.vertical) return;
+					var vAcceleration = this.scrollParams.vAcceleration;
+					var hAcceleration = this.scrollParams.hAcceleration;
+					var scrollY = this.scrollParams.vPos;
+					var scrollX = this.scrollParams.hPos
+					deltaY = deltaY * vAcceleration;
+					deltaX = deltaX * hAcceleration;
+					deltaY = deltaY > 0 ? Math.ceil(deltaY) : Math.floor(deltaY);
+					deltaX = deltaX > 0 ? Math.ceil(deltaX) : Math.floor(deltaX);
+					this.scrollTo(scrollY - deltaY, scrollX - deltaX);
+					e.preventDefault();
+				}.bind(this));
+
+				this.el.on('mousedown.table', '.vscroll .at-scrollbar', function (e) {
+					e.preventDefault()
+					var jqScrollbar = $(e.currentTarget);
+					this.scrollParams.vBarOffsetY = e.offsetY || e.originalEvent.layerY;
+					this.scrollParams.isVscrolling = true;
+					jqScrollbar.closest('.vscroll').addClass('active');
+					this.disableTextSelection();
+				}.bind(this));
+
+				this.el.on('mousedown.table', '.hscroll .at-scrollbar', function (e) {
+					e.preventDefault()
+					var jqScrollbar = $(e.currentTarget);
+					this.scrollParams.hBarOffsetX = e.offsetX || e.originalEvent.layerX;
+					this.scrollParams.isHscrolling = true;
+					jqScrollbar.closest('.hscroll').addClass('active');
+					this.disableTextSelection();
+				}.bind(this));
+
+				this.el.on('mouseup.table', function (e) {
+					this.scrollParams.isVscrolling = false;
+					this.scrollParams.isHscrolling = false;
+					this.el.find('.vscroll, .hscroll').removeClass('active');
+					this.enableTextSelection();
+				}.bind(this));
+
+				//sort
+				this.el.on('click.table', '.dtable th', function () {
+					var sort = [];
+					var fieldName = $(this).attr('rel');
+					var resetSort = false;
+					if (!self.fields[fieldName] || !self.fields[fieldName].sortable) return false;
+					var order = 'desc';
+					if ($(this).hasClass('desc')) order = 'asc';
+					if ($(this).hasClass('asc')) {
+						if (self.defaultSort) {
+							resetSort = true;
+						} else {
+							order = 'desc';
+						}
+					}
+					if (resetSort) {
+						self.sort = null;
+						self.data.sort(self.defaultSort);
+					} else {
+						sort.push({fieldName: fieldName, order: order});
+						self.sort = sort;
+						self.data.sort(sort);
+					}
+					self.saveState();
 					self.render();
-					return;
-				}
-				var jqRow = jqCell.closest('tr');
-				var fieldName = jqCell.attr('rel');
-				var idx = jqRow.attr('rel');
-				var patch = {};
-				var field = self.fields[fieldName];
-				var softMode = !field.saveChange;
-				patch[fieldName] = jqInput.val();
-	    			self.data.update({idx: idx}, patch, softMode);
-				//TODO: DOM exeption on ENTER press
-				self.render();
-				if ($.browser.msie) return;
-				setTimeout(function () {
-					var jqElemendUnderMouse = $(document.elementFromPoint(self.clientX, self.clientY));
-					var jqCell = jqElemendUnderMouse.closest('td');
-					var jqRow = jqCell.closest('td');
-					jqRow.mouseenter();
-					if (jqCell.is('.editable')) jqCell.find('input').focus();
+					self.scrollTo(0);
+					return false;
 				});
-			});
 
+				//pagination
+				this.el.on('click.table', '.pager a', function (e) {
+					self.switchPage($(this).attr('rel'));
+					e.preventDefault();
+				});
 
-			//UI
+				//checkboxes
+				this.el.on('click.table', 'td.col-checkbox', function (e) {
+					var jqCheckbox = $(e.currentTarget).find('.checkbox');
+					var idx = jqCheckbox.attr('rel');
+					if (!idx) return;
+					self.check(idx, !jqCheckbox.hasClass('checked'));
+					if (!e.shiftKey) {
+						self.lastCheckedIdx = idx;
+						return;
+					}
+					if (!self.lastCheckedIdx) return;
 
-			//checkbox
-			this.el.on('mousedown.table', '.at-checkbox', function (e) {
-				var $target = $(e.currentTarget);
-				var $input = $target.find('input');
-				if ($target.hasClass('checked')) {
-					$target.removeClass('checked');
-					$input.val('');
-				} else {
-					$target.addClass('checked');
-					$input.val(1);
-				}
-				$input.change();
-			});
+					var tmp;
+					var fromIdx = idx;
+					var toIdx = self.lastCheckedIdx;
+					var jqFromRow = self.el.find('.dtable tr[rel="' + fromIdx + '"]');
+					var jqToRow = self.el.find('.dtable tr[rel="' + toIdx + '"]');
+					if (jqFromRow.index() > jqToRow.index()) {
+						tmp = jqFromRow;
+						jqFromRow = jqToRow;
+						jqToRow = tmp;
+					}
+					var jqRow = jqFromRow;
+					var checkIdxs = [];
+					while ((jqRow = jqRow.next()).length) {
+						if (jqRow.attr('rel') == jqToRow.attr('rel')) break;
+						checkIdxs.push(jqRow.attr('rel'));
+					}
+					self.check(checkIdxs, true);
+					self.render();
+				});
 
+				//multiple check
+				this.el.on('click.table', 'th.col-checkbox', function (e) {
+					var jqCheckbox = $(e.currentTarget).find('.checkbox');
+					if (jqCheckbox.hasClass('checked')) {
+						self.checkAll();
+						return;
+					}
+					if (jqCheckbox.hasClass('checked-all')) {
+						self.checkAll(false);
+						return;
+					}
+					self.checkPage();
+				});
 
-			//dropdown
-			this.el.on('click.table', '.at-dropdown-button', function (e) {
-				e.preventDefault();
-				var $dropdown = $(e.currentTarget).closest('.at-dropdown');
-				var id = 'at-dropdown-' + $.now();
-				if ($dropdown.hasClass('open')) return;
-				$dropdown.addClass('open').attr('id', id);
-				$dropdown.trigger('dropdownOpen');
-				setTimeout(function () {
-					$('body').on('click.' + id, function (e) {
-						var $target = $(e.target);
-						if (!$target.hasClass('.at-dropdown-button') && !$target.closest('.at-dropdown-button').length) {
-							if ($target.attr('id') == id || $target.closest('#' + id).length) return;
+				var fnMouseOutRow = function (jqRow) {
+					jqRow.removeClass('hovered');
+					jqRow.find('.editable').each(function () {
+						var jqCell = $(this);
+						var fieldName = jqCell.attr('rel');
+						if (jqCell.data('editArea')) {
+							jqCell.find('input[name="' + fieldName + '"]').replaceWith(jqCell.data('editArea'));
+							jqCell.removeData('editArea');
+						} else {
+							jqCell.html(jqCell.data('content'));
+							jqCell.removeData('content');
 						}
-						$('body').off(e);
-						$dropdown.removeClass('open');
-						$dropdown.trigger('dropdownClose');
+					});
+				};
+
+
+				//dtable mouseleave
+				this.el.on('mouseleave.table', '.dtable', function () {
+					fnMouseOutRow(self.el.find('tr.hovered:not(.focused)'));
+				}.bind(this));
+
+				//table mouseleave
+				this.el.on('mouseleave.table', function () {
+					this.scrollParams.isVscrolling = false;
+					this.scrollParams.isHscrolling = false;
+				}.bind(this));
+
+				//fields mouseenter
+				this.el.on('mouseenter.table', 'tr:not(.focused)', function (e) {
+					var jqPrevRow = self.el.find('tr.hovered:not(.focused)');
+					fnMouseOutRow(jqPrevRow);
+					var jqRow = $(e.currentTarget);
+					if (jqRow.hasClass('fake')) return;
+					if (jqRow.hasClass('vscroll-overflow-tr')) return;
+					jqRow.addClass('hovered');
+					jqRow.find('.editable').each(function () {
+						var jqCell = $(this);
+						var fieldName = jqCell.attr('rel');
+						var value = jqCell.attr('value');
+						var jqEditArea = jqCell.find('.edit-area');
+						var jqField = '<input type="text" name="' + fieldName + '" value="' + (value !== undefined ? value : '') + '"/>';
+						if (jqCell.data('editArea')) return;
+						if (jqEditArea.length) {
+							jqCell.data('editArea', jqEditArea.replaceWith(jqField));
+						} else {
+							var cellContent = jqCell.html();
+							jqCell.html(jqField);
+							jqCell.data('content', cellContent);
+						}
 					});
 				});
-			});
 
-			this.emit('attachEvents', this);
-			return true;
-		},
+				this.el.on('mouseleave.table', '.vscroll-layer', function (e) {
+					fnMouseOutRow(this.el.find('tr.hovered:not(.focused)'));
+				}.bind(this));
 
-		//DATA EVENT HANDLERS:
-		
-		_dataListener: function (eventName, data) {
-			switch (eventName) {
-				case 'change': this._onDataChangeHandler(data); break;
-				case 'fieldsChange': this._onDataFieldsChangeHandler(data); break;
-				case 'commit': this._onDataCommitHandler(data); break;
-			}
-		},
+				//input focusin
+				this.el.on('focusin.table', 'tr .editable input', function (e) {
+					var jqInput = $(e.currentTarget);
+					var jqRow = jqInput.closest('tr');
+					self.el.find('tr.focused').removeClass('focused').mouseleave();
+					jqRow.addClass('focused');
+				});
 
-		_onDataChangeHandler: function (change) {
-			this._computeFilter();
-			this.emit('dataChange', change);
-			if (!change) return;
-			if (this.selection.length) {
-				if (change.action && ~$.inArray(change.action, ['remove', 'revert'])) this.recheck();
-			}
-			if (change.action && ~$.inArray(change.action, ['add', 'update'])) {
-				this.sort = null;
-			}
-		},
+				//input focusout
+				this.el.on('focusout.table', '.editable input', function (e) {
+					var jqRow = $(e.currentTarget).closest('tr');
+					jqRow.removeClass('focused');
+					fnMouseOutRow(jqRow);
+				});
 
-		_onDataFieldsChangeHandler: function (change) {
-			change = $.extend({action: null, fields: []}, change);
-			
-			if (change.action == 'remove') {
-				for (var key in change.fields) {
-					var fieldName = change.fields[key];
-					if (this.fields[fieldName]) {
-						var visiblePos = $.inArray(fieldName, this.visibleFields);
-						if (~visiblePos) this.visibleFields.splice(visiblePos, 1);
-						delete this.fields[fieldName];
+				//editable fields keyup
+				this.el.on('keyup.table', '.editable input', function (e) {
+					var jqInput = $(e.currentTarget);
+					var jqCell = jqInput.closest('td');
+					var value = jqInput.val();
+					var field = self.fields[jqInput.attr('name')];
+					var err = 0;
+
+					if (field.minValue !== undefined) {
+						if (value == '') {
+							err++;
+						} else {
+							value = Number(value);
+							if (isNaN(value)) {
+								err++;
+							} else if (value < field.minValue) {
+								err++;
+							}
+						}
+					}
+
+					if (field.maxValue !== undefined) {
+						if (value == '') {
+							err++;
+						} else {
+							value = Number(value);
+							if (isNaN(value)) {
+								err++;
+							} else if (value > field.maxValue) {
+								err++;
+							}
+						}
+					}
+
+					if ((field.validation instanceof RegExp) && !field.validation.test(value)) {
+						err++;
+					}
+
+					if (err) {
+						jqCell.addClass('invalid');
+					} else {
+						jqCell.removeClass('invalid')
+					}
+				});
+
+				//input keypress
+				this.el.on('keypress.table', '.editable input', function (e) {
+					var jqTd = $(e.currentTarget).closest('td'), keyCode = e.keyCode || e.which;
+					if (jqTd.hasClass('number')) {
+						~$.inArray(keyCode,ARROWS_BS_DEL)
+							|| (keyCode >= DIGIT_BOUNDS[0] && keyCode <= DIGIT_BOUNDS[1])
+						|| e.preventDefault();
+					}
+				});
+
+				//input change
+				this.el.on('change.table', '.editable input', function (e) {
+					var jqInput = $(e.currentTarget);
+					var jqCell = jqInput.closest('td');
+					if (jqCell.hasClass('invalid')) {
+						self.render();
+						return;
+					}
+					var jqRow = jqCell.closest('tr');
+					var fieldName = jqCell.attr('rel');
+					var idx = jqRow.attr('rel');
+					var patch = {};
+					var field = self.fields[fieldName];
+					var softMode = !field.saveChange;
+					patch[fieldName] = jqInput.val();
+					self.data.update({idx: idx}, patch, softMode);
+					//TODO: DOM exeption on ENTER press
+					self.render();
+					if ($.browser.msie) return;
+					setTimeout(function () {
+						var jqElemendUnderMouse = $(document.elementFromPoint(self.clientX, self.clientY));
+						var jqCell = jqElemendUnderMouse.closest('td');
+						var jqRow = jqCell.closest('td');
+						jqRow.mouseenter();
+						if (jqCell.is('.editable')) jqCell.find('input').focus();
+					});
+				});
+
+
+				//UI
+
+				//checkbox
+				this.el.on('mousedown.table', '.at-checkbox', function (e) {
+					var $target = $(e.currentTarget);
+					var $input = $target.find('input');
+					if ($target.hasClass('checked')) {
+						$target.removeClass('checked');
+						$input.val('');
+					} else {
+						$target.addClass('checked');
+						$input.val(1);
+					}
+					$input.change();
+				});
+
+
+				//dropdown
+				this.el.on('click.table', '.at-dropdown-button', function (e) {
+					e.preventDefault();
+					var $dropdown = $(e.currentTarget).closest('.at-dropdown');
+					var id = 'at-dropdown-' + $.now();
+					if ($dropdown.hasClass('open')) return;
+					$dropdown.addClass('open').attr('id', id);
+					$dropdown.trigger('dropdownOpen');
+					setTimeout(function () {
+						$('body').on('click.' + id, function (e) {
+							var $target = $(e.target);
+							if (!$target.hasClass('.at-dropdown-button') && !$target.closest('.at-dropdown-button').length) {
+								if ($target.attr('id') == id || $target.closest('#' + id).length) return;
+							}
+							$('body').off(e);
+							$dropdown.removeClass('open');
+							$dropdown.trigger('dropdownClose');
+						});
+					});
+				});
+
+				this.emit('attachEvents', this);
+				return true;
+			},
+
+			//DATA EVENT HANDLERS:
+
+			_dataListener: function (eventName, data) {
+				switch (eventName) {
+					case 'change': this._onDataChangeHandler(data); break;
+					case 'fieldsChange': this._onDataFieldsChangeHandler(data); break;
+					case 'commit': this._onDataCommitHandler(data); break;
+				}
+			},
+
+			_onDataChangeHandler: function (change) {
+				this._computeFilter();
+				this.emit('dataChange', change);
+				if (!change) return;
+				if (this.selection.length) {
+					if (change.action && ~$.inArray(change.action, ['remove', 'revert'])) this.recheck();
+				}
+				if (change.action && ~$.inArray(change.action, ['add', 'update'])) {
+					this.sort = null;
+				}
+			},
+
+			_onDataFieldsChangeHandler: function (change) {
+				change = $.extend({action: null, fields: []}, change);
+
+				if (change.action == 'remove') {
+					for (var key in change.fields) {
+						var fieldName = change.fields[key];
+						if (this.fields[fieldName]) {
+							var visiblePos = $.inArray(fieldName, this.visibleFields);
+							if (~visiblePos) this.visibleFields.splice(visiblePos, 1);
+							delete this.fields[fieldName];
+						}
+					}
+					return;
+				}
+
+				for (var key in this.data.columns) {
+					var fieldName = this.data.columns[key];
+					if (~$.inArray(fieldName, this.hiddenFields)) continue;
+					if (!this.fields[fieldName]) {
+						this.fields[fieldName] = $.extend({}, this.params.fieldsDefaults, {name: fieldName});
+						if (!this.showOnlyDescribed) this.visibleFields.push(fieldName);
 					}
 				}
-				return;
-			}
+			},
 
-			for (var key in this.data.columns) {
-				var fieldName = this.data.columns[key];
-				if (~$.inArray(fieldName, this.hiddenFields)) continue;
-				if (!this.fields[fieldName]) {
-					this.fields[fieldName] = $.extend({}, this.params.fieldsDefaults, {name: fieldName});
-					if (!this.showOnlyDescribed) this.visibleFields.push(fieldName);
+			_onDataCommitHandler: function () {
+				this.emit('commit');
+			},
+
+			//EXTERNAL EVENT HANDLERS:
+
+			_onFilterHandler: function (widget, expr) {
+				if (!expr) {
+					widget.name ? this.removeFilter(widget.name) : this.removeFilter();
+				} else {
+					widget.name ? this.addFilter(widget.name, expr) : this.addFilter(expr);
 				}
-			}
-		},
+				if (this.selection.length) this.recheck();
+				this.render('.data-table');
+			},
 
-		_onDataCommitHandler: function () {
-			this.emit('commit');
-		},
+			_onPerPageHandler: function (e) {
+				e = $.extend({value: 1, caller: null}, e);
+				if (!e.caller || e.caller.isRendered) {
+					this.perPage = Number(e.value);
+					this.switchPage(1);
+					this.render();
+				}
+			},
 
-		//EXTERNAL EVENT HANDLERS:
+			_onClearSelectionHandler: function () {
+				this.checkAll(false);
+			},
 
-		_onFilterHandler: function (widget, expr) {
-			if (!expr) {
-				widget.name ? this.removeFilter(widget.name) : this.removeFilter();
-			} else {
-				widget.name ? this.addFilter(widget.name, expr) : this.addFilter(expr);
-			}
-			if (this.selection.length) this.recheck();
-			this.render('.data-table');
-		},
+			_onCommitHandler: function () {
+				this.data.commit();
+			},
 
-		_onPerPageHandler: function (e) {
-			e = $.extend({value: 1, caller: null}, e);
-			if (!e.caller || e.caller.isRendered) {
-				this.perPage = Number(e.value);
-				this.switchPage(1);
+			_onRollbackHandler: function () {
+				this.data.rollback();
+				this.emit('rollback');
 				this.render();
 			}
 		},
+		// STATIC PROPS:
+		{
 
-		_onClearSelectionHandler: function () {
-			this.checkAll(false);
-		},
-
-		_onCommitHandler: function () {
-			this.data.commit();
-		},
-
-		_onRollbackHandler: function () {
-			this.data.rollback();
-			this.emit('rollback');
-			this.render();
-		}
-	},
-	// STATIC PROPS:
-	{
-
-		Haml: Haml,
+			Haml: Haml,
 			Widget: Widget,
 			utils: tableUtils,
 			widgetsSet: {},
 
-		/**
-		 * installWidget ([parent], name, prototype)
-		 */
-		installWidget: function (parent, name, prototype ) {
-			switch (arguments.length) {
-				case 2:
-					prototype = name;
-					name = parent;
-					var Parent = ActiveTable.Widget;
-					break;
-				case 3:
-					var Parent = ActiveTable.getWidget(parent);
-					if (!Parent) {
-						console.log('parent widget not found');
+			/**
+			 * installWidget ([parent], name, prototype)
+			 */
+			installWidget: function (parent, name, prototype ) {
+				switch (arguments.length) {
+					case 2:
+						prototype = name;
+						name = parent;
+						var Parent = ActiveTable.Widget;
+						break;
+					case 3:
+						var Parent = ActiveTable.getWidget(parent);
+						if (!Parent) {
+							console.log('parent widget not found');
+							return false;
+						}
+						break;
+					default:
+						console.error('wrong arguments count');
 						return false;
-					}
-					break;
-				default:
-					console.error('wrong arguments count');
-					return false;
-					break;
+						break;
+				}
+
+				var NewWidget = Parent.extend(prototype);
+				NewWidget.installTemplate = Widget.installTemplate;
+				NewWidget.prototype.componentName = name;
+				ActiveTable.widgetsSet[name] = NewWidget;
+			},
+
+			installDefaultTemplates: function(templates) {
+				if (!this.prototype.defaultTemplates) this.prototype.defaultTemplates = {};
+				this.prototype.defaultTemplates = $.extend({}, this.prototype.defaultTemplates, templates);
+			},
+
+			getWidget: function (name) {
+				return this.widgetsSet[name];
 			}
 
-			var NewWidget = Parent.extend(prototype);
-			NewWidget.prototype.componentName = name;
-			ActiveTable.widgetsSet[name] = NewWidget;
-		},
-
-		installDefaultTemplates: function(templates) {
-			if (!this.prototype.defaultTemplates) this.prototype.defaultTemplates = {};
-			this.prototype.defaultTemplates = $.extend({}, this.prototype.defaultTemplates, templates);
-		},
-
-		getWidget: function (name) {
-			return this.widgetsSet[name];
-		}
-
-	});
+		});
 
 
 	ActiveTable.installDefaultTemplates({
@@ -1899,6 +1899,7 @@
 					['.lock-overlay'],
 					['.widgets'],
 					['.dtable', p.ttable, p.vscroll, p.hscroll],
+					['.bottom-widgets'],
 					['.pager', p.pagination],
 					[".clearfix", {style: 'clear:both'}]
 				]
