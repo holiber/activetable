@@ -1,5 +1,5 @@
 /**
- * v0.3.1
+ * v0.3.3
  * Available via the MIT license.
  * see: http://github.com/holiber/activetable
  */
@@ -1216,7 +1216,7 @@
 					}
 				}
 				if (!cnt) this.computedFilter = null;
-				this.rowsCnt = this.data.find(this.computedFilter).length;
+				this.rowsCnt = this.computedFilter ? this.data.find(this.computedFilter).length : this.data.size();
 				var pagesCnt = Math.ceil(this.rowsCnt / this.perPage);
 				if (this.page < 1) this.page = 1;
 				if (pagesCnt && this.page > pagesCnt) this.page = pagesCnt;
