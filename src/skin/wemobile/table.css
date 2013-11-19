@@ -37,7 +37,7 @@
 	font-weight:bold;
 	height:2em;
 	cursor: pointer;
-	padding: 0
+	padding: 0;
 }
 
 .data-table th.asc {border-bottom: none}
@@ -123,11 +123,6 @@
 .data-table th > .foot-wrap
 {vertical-align: middle;padding:0 0.5em; box-sizing: border-box}
 
-.active-table.has-vscroll .data-table th > .column-wrap,
-.active-table.has-vscroll .data-table th > .foot-wrap {
-	display: table-cell;
-}
-
 .data-table th:last-child > .column-wrap,
 .data-table th:last-child > .foot-wrap
 {padding-right: 15px}
@@ -143,7 +138,6 @@
 .active-table tfoot tr{height: 3em;}
 
 .data-table tbody td {padding: 0.5em; text-align:center;border-top: 1px solid #e8e8e8}
-.data-table tbody td.vscroll-overflow-td{ border-top: none; }
 .data-table tbody tr:active td {
 	box-shadow: 0px 0.5em 0.5em -0.5em #cacaca inset, 0px -0.5em 0.5em -0.5em #cacaca inset;
 }
@@ -228,166 +222,7 @@
 /* pager */
 .active-table .pager {display: none}
 
-/* scroll */
-.active-table.has-vscroll .dtable {
-	height: 100%;
-}
 
-.active-table.has-vscroll .data-table,
-.active-table.has-hscroll .data-table {
-	height: 100%;
-}
-
-.active-table.has-hscroll .dtable {
-	padding-bottom: 12px;
-}
-
-
-.active-table.has-hscroll .data-table {
-	border-left: none;
-}
-
-.active-table .at-scrollbar {
-	background-color: #d8d8d8;
-	position: absolute;
-	cursor: default;
-}
-
-
-.active-table .at-scrollbar:hover,
-.active-table .hscroll.active .at-scrollbar,
-.active-table .vscroll.active .at-scrollbar
-{background-color: #b5b5b5}
-
-.active-table .vscroll {
-	position: absolute;
-	background-color: #f6f6f6;
-	width: 12px;
-	top: 42px;
-	right: 1px;
-	bottom: 40px;
-}
-
-.active-table .vscroll.disabled {display: none}
-
-.active-table .scroll-btn {
-	display: none;/*disabled for this skin*/
-}
-
-
-.active-table .vscroll .scroll-track {
-	background-color: #f7f7f7;
-	width: 11px;
-	position: absolute;
-	top: 0;
-	bottom: 0px;
-}
-
-.active-table .vscroll .at-scrollbar{
-	width: 11px;
-	min-height: 10px;
-	top: 0;
-	cursor: default;
-}
-
-.active-table .vscroll.disabled .at-scrollbar,
-.active-table .hscroll.disabled .at-scrollbar{
-	display: none;
-}
-
-.active-table .vscroll-overflow-tr.hovered > td {
-	background: none;
-}
-
-.active-table .vscroll-overflow-td {
-	padding: 0 !important;
-	height: 100%;
-	vertical-align: top;
-}
-
-.active-table .vscroll-overflow {
-	overflow: hidden;
-	position: relative;
-	vertical-align: top;
-	padding: 0;
-	/*box-shadow: inset 0 0 15px #e8e8e8;*/
-}
-
-.active-table .vscroll-layer {
-	position: absolute;
-	width: 100%;
-	top: 0;
-}
-
-.active-table .hscroll-overflow {
-	position: relative;
-	overflow: hidden;
-	padding: 0;
-	border-left: 1px solid #d0d0d0;
-}
-
-.active-table .hscroll-layer {
-	position: absolute;
-}
-
-.active-table.has-hscroll .data-table thead,
-.active-table.has-vscroll .data-table thead {
-	white-space: nowrap;
-}
-
-.active-table.has-hscroll .data-table th,
-.active-table.has-vscroll .data-table th{
-	white-space: normal;
-}
-
-.active-table.has-hscroll .data-table tfoot td,
-.active-table.has-vscroll .data-table tfoot td{
-	white-space: normal;
-}
-
-.active-table .hscroll {
-	position: absolute;
-	height: 12px;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	border: 1px solid #d2d2d2;
-	border-top: 0;
-}
-
-.active-table .scroll-left {
-	top: 0px;
-	left: 0;
-	width: 11px;
-	height: 11px;
-	border-right: none;
-	background-position: -239px -3px;
-}
-
-
-.active-table .scroll-right {
-	top: 0px;
-	right: 12px;
-	width: 11px;
-	height: 11px;
-	border-left: none;
-	background-position: -254px -3px;
-}
-
-.active-table .hscroll .scroll-track {
-	background-color: #f7f7f7;
-	height: 11px;
-	position: absolute;
-	left: 0px;
-	right: 0px;
-	cursor: default;
-}
-
-.active-table .hscroll .at-scrollbar{
-	height: 11px;
-	min-width: 10px;
-	left: 0;
-}
 
 /* ui */
 .at-icon {
@@ -491,4 +326,3 @@
 }
 
 .at-dropdown.open .at-dropdown-content {display: block}
-

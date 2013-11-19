@@ -19,7 +19,6 @@ $(function () {
 	var table = window.table = new ActiveTable({
 		data: data,
 		el: $('.table-place'),
-		checked: true,
 		order: ['type', 'color', 'weight', 'price', 'image'],
 		fields: {
 			image: {

@@ -1,8 +1,8 @@
 ActiveTable
 ============
-Interactive template-based component for displaing tables based on [Qstore](https://github.com/holiber/activedata) collections
+Interactive template-based component for rendering tables based on [Qstore](https://github.com/holiber/activedata) collections
 
 #Build
-run **build.sh** script to pack scripts
+run **grunt build**
 
 then see **dist** directory for results
