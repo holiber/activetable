@@ -1,6 +1,6 @@
 /*!
 * ActiveTable 
-* v0.4.0
+* v0.4.1
 * Licensed under the MIT license.
 * @see: http://github.com/holiber/activetable
 */
@@ -1010,8 +1010,8 @@
 			return '<thead><tr>' + p.columns + '</tr></thead>';
 		},
 
-		tfoot: function (params) {
-			if (!table.hasFooter) return '';
+		tfoot: function (p) {
+			if (!p.table.hasFooter) return '';
 			return '<tfoot><tr>' + p.columns + '</tr></tfoot>';
 		},
 

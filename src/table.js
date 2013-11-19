@@ -1003,8 +1003,8 @@
 			return '<thead><tr>' + p.columns + '</tr></thead>';
 		},
 
-		tfoot: function (params) {
-			if (!table.hasFooter) return '';
+		tfoot: function (p) {
+			if (!p.table.hasFooter) return '';
 			return '<tfoot><tr>' + p.columns + '</tr></tfoot>';
 		},
 
