@@ -607,7 +607,7 @@
 			 * @param {String}
 			 */
 			getClasses: function () {
-				var classes = ' ' + this.utils.toScore(table.name + '-table.active-table');
+				var classes = ' ' + this.utils.toScore(this.name + '-table active-table');
 				if (!this.canSelectText) classes += ' unselectable';
 				if (this.selection.length) classes +=' has-selected';
 				if (this.locked) classes += ' locked';
