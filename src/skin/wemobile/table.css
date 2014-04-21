@@ -121,7 +121,7 @@
 
 .data-table th > .column-wrap,
 .data-table th > .foot-wrap
-{vertical-align: middle;padding:0 0.5em; box-sizing: border-box}
+{vertical-align: middle;padding:0 1em; box-sizing: border-box}
 
 .data-table th:last-child > .column-wrap,
 .data-table th:last-child > .foot-wrap
