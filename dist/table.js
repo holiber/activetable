@@ -1,6 +1,6 @@
 /*!
 * ActiveTable 
-* v0.4.1
+* v0.4.2
 * Licensed under the MIT license.
 * @see: http://github.com/holiber/activetable
 */
@@ -308,6 +308,7 @@
 				if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
 				if (options.order) this.order = options.order;
 				if (options.hiddenFields) this.hiddenFields = options.hiddenFields;
+                if (options.perPage) this.perPage = options.perPage ;
 				if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || options.data || (!options.data && this.showOnlyDescribed)) {
 					this.setFields(options.fields);
 				}
