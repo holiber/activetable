@@ -1,6 +1,6 @@
 /*!
 * ActiveTable 
-* v0.4.3
+* v0.4.4
 * Licensed under the MIT license.
 * @see: http://github.com/holiber/activetable
 */
