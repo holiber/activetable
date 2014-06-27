@@ -1,6 +1,6 @@
 /*!
 * ActiveTable 
-* v0.4.2
+* v0.4.3
 * Licensed under the MIT license.
 * @see: http://github.com/holiber/activetable
 */
@@ -308,7 +308,7 @@
 				if (options.showOnlyDescribed) this.showOnlyDescribed = options.showOnlyDescribed;
 				if (options.order) this.order = options.order;
 				if (options.hiddenFields) this.hiddenFields = options.hiddenFields;
-                if (options.perPage) this.perPage = options.perPage ;
+				if (options.perPage) this.perPage = options.perPage ;
 				if (options.fields || options.order || options.showOnlyDescribed || options.hiddenFields || options.data || (!options.data && this.showOnlyDescribed)) {
 					this.setFields(options.fields);
 				}
@@ -928,12 +928,25 @@
 				}
 				var cells = table.templates.trow(rowParams);
 
+				// collect row classes
+				var classes = '';
+				for (var name in row) {
+					var fieldParams = table.fields[name];
+					if (!fieldParams.rowClass) continue;
+					if (typeof fieldParams.rowClass == 'function') {
+						classes += ' ' + (fieldParams.rowClass.call(table, row) || '');
+					} else {
+						if (row[name]) classes += ' ' + name
+					}
+				}
+
 				var rowWrapParams = {
 					tpl: {rowWrap: true},
 					table: table,
 					row: row,
 					odd: odd,
-					cells: cells
+					cells: cells,
+					classes: classes
 				}
 				var row = table.templates.rowWrap(rowWrapParams);
 				rows += row;
@@ -1113,7 +1126,7 @@
 		},
 
 		rowWrap: function (p) {
-			return '<tr class="' + (p.odd ? "odd" : "even") + (p.fake ? ' fake' : '') + '" rel="' + p.row.idx + '">' + p.cells + '</tr>';
+			return '<tr class="' + (p.odd ? "odd" : "even") + (p.fake ? ' fake' : '') + p.classes + '" rel="' + p.row.idx + '">' + p.cells + '</tr>';
 		},
 
 		columns: {
